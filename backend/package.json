@@ -1,0 +1,51 @@
+{
+  "name": "placement-portal-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Placement Practice Portal - PostgreSQL",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "tsx src/scripts/test-phase1.ts && tsx src/scripts/test-phase2.ts",
+    "db:schema": "tsx src/scripts/db-schema.ts",
+    "db:seed": "tsx src/scripts/db-seed.ts",
+    "db:check": "tsx src/scripts/db-check.ts",
+    "db:test": "tsx src/scripts/db-test.ts",
+    "db:init": "tsx src/scripts/init-db.ts",
+    "seed:phase2": "tsx src/scripts/seed-phase2.ts",
+    "seed:testcases": "tsx src/scripts/seed-testcases.ts",
+    "test:phase1": "tsx src/scripts/test-phase1.ts",
+    "test:phase2": "tsx src/scripts/test-phase2.ts",
+    "test:phase3": "tsx src/scripts/test-phase3.ts",
+    "test:phase4": "tsx src/scripts/test-phase4.ts",
+    "test:phase5": "tsx src/scripts/test-phase5.ts",
+    "test:phase6": "tsx src/scripts/test-phase6.ts",
+    "test:phase7": "tsx src/scripts/test-phase7.ts",
+    "test:phase8": "tsx src/scripts/test-phase8.ts"
+  },
+  "keywords": ["placement-portal", "authentication", "express", "jwt", "postgresql", "pg"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.3",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^22.13.10",
+    "@types/pg": "^8.11.11",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}
