@@ -20,9 +20,16 @@ import {
 // ---------------------------------------------------------------------------
 // Helper: Check if GitHub OAuth is configured
 // ---------------------------------------------------------------------------
+const DEFAULT_PLACEHOLDER_KEY = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
+
 function isGitHubConfigured(): boolean {
-  return !!(ENV.GITHUB.CLIENT_ID && ENV.GITHUB.CLIENT_SECRET &&
-    ENV.GITHUB.CLIENT_ID !== 'your_github_client_id_here');
+  const hasCredentials = !!(ENV.GITHUB.CLIENT_ID && ENV.GITHUB.CLIENT_SECRET &&
+    ENV.GITHUB.CLIENT_ID !== 'your_github_client_id_here' &&
+    ENV.GITHUB.CLIENT_SECRET !== 'your_github_client_secret_here');
+  const hasRealEncryptionKey = !!(ENV.GITHUB.ENCRYPTION_KEY &&
+    ENV.GITHUB.ENCRYPTION_KEY !== DEFAULT_PLACEHOLDER_KEY &&
+    ENV.GITHUB.ENCRYPTION_KEY.length >= 64);
+  return hasCredentials && hasRealEncryptionKey;
 }
 
 // ---------------------------------------------------------------------------
@@ -39,18 +46,56 @@ function getFrontendUrl(): string {
 }
 
 // ---------------------------------------------------------------------------
+// GET /api/github/health  (public — no auth required)
+// Returns whether GitHub OAuth is fully configured on this server.
+// Safe to call without a JWT — never returns secrets.
+// ---------------------------------------------------------------------------
+export const getGitHubHealth = (_req: Request, res: Response): void => {
+  const configured = isGitHubConfigured();
+  const missing: string[] = [];
+  if (!ENV.GITHUB.CLIENT_ID || ENV.GITHUB.CLIENT_ID === 'your_github_client_id_here') {
+    missing.push('GITHUB_CLIENT_ID');
+  }
+  if (!ENV.GITHUB.CLIENT_SECRET || ENV.GITHUB.CLIENT_SECRET === 'your_github_client_secret_here') {
+    missing.push('GITHUB_CLIENT_SECRET');
+  }
+  if (!ENV.GITHUB.ENCRYPTION_KEY || ENV.GITHUB.ENCRYPTION_KEY === DEFAULT_PLACEHOLDER_KEY) {
+    missing.push('GITHUB_ENCRYPTION_KEY (must not be the default placeholder)');
+  }
+  res.json({
+    success: true,
+    data: {
+      configured,
+      missing_variables: configured ? [] : missing,
+      callback_url: ENV.GITHUB.CALLBACK_URL || null,
+    },
+  });
+};
+
+// ---------------------------------------------------------------------------
 // GET /api/github/auth
 // Redirects the authenticated user to GitHub OAuth authorization page.
 // ---------------------------------------------------------------------------
 export const initiateOAuth = async (req: Request, res: Response): Promise<void> => {
   if (!isGitHubConfigured()) {
+    const missing: string[] = [];
+    if (!ENV.GITHUB.CLIENT_ID || ENV.GITHUB.CLIENT_ID === 'your_github_client_id_here') {
+      missing.push('GITHUB_CLIENT_ID');
+    }
+    if (!ENV.GITHUB.CLIENT_SECRET || ENV.GITHUB.CLIENT_SECRET === 'your_github_client_secret_here') {
+      missing.push('GITHUB_CLIENT_SECRET');
+    }
+    if (!ENV.GITHUB.ENCRYPTION_KEY || ENV.GITHUB.ENCRYPTION_KEY === DEFAULT_PLACEHOLDER_KEY) {
+      missing.push('GITHUB_ENCRYPTION_KEY');
+    }
     res.status(503).json({
       success: false,
-      message: 'GitHub OAuth is not configured on this server. Please add GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET to the backend environment variables.',
-      data: null,
+      message: `GitHub OAuth is not configured. Missing or placeholder values for: ${missing.join(', ')}. Set these in your Render backend environment variables and redeploy.`,
+      data: { missing_variables: missing },
     });
     return;
   }
+
 
   const userId = req.user!.id;
   const state = crypto.randomBytes(32).toString('hex');
@@ -268,7 +313,50 @@ export const getRepositories = async (req: Request, res: Response): Promise<void
 };
 
 // ---------------------------------------------------------------------------
-// POST /api/github/select-repository
+// GET /api/github/repositories/:owner/:repo/branches
+// Returns branches of a repo the user has access to.
+// ---------------------------------------------------------------------------
+export const getBranches = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user!.id;
+  const { owner, repo } = req.params as { owner: string; repo: string };
+
+  if (!owner || !repo) {
+    res.status(400).json({ success: false, message: 'owner and repo are required.', data: null });
+    return;
+  }
+
+  try {
+    const result = await pool.query(
+      'SELECT encrypted_access_token, encryption_iv FROM github_connections WHERE user_id = $1',
+      [userId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(400).json({ success: false, message: 'GitHub account not connected.', data: null });
+      return;
+    }
+
+    const { encrypted_access_token, encryption_iv } = result.rows[0];
+    const accessToken = decryptToken(encrypted_access_token, encryption_iv);
+
+    const { getRepositoryBranches } = await import('../services/github/github.service');
+    const branches = await getRepositoryBranches(accessToken, owner, repo);
+
+    res.json({
+      success: true,
+      data: branches.map((b) => ({
+        name: b.name,
+        protected: b.protected,
+        commit_sha: b.commit?.sha,
+      })),
+    });
+  } catch (error: any) {
+    console.error('[GitHub] getBranches error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to fetch branches.', data: null });
+  }
+};
+
+
 // Save the user's chosen repo + branch after verifying push access.
 // ---------------------------------------------------------------------------
 export const selectRepository = async (req: Request, res: Response): Promise<void> => {

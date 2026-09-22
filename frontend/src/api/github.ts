@@ -32,6 +32,12 @@ export interface GitHubRepo {
   updated_at: string;
 }
 
+export interface GitHubBranch {
+  name: string;
+  protected: boolean;
+  commit_sha?: string;
+}
+
 export interface PushSolutionParams {
   problem_id?: number;
   problem_title: string;
@@ -64,15 +70,7 @@ export function initiateGitHubOAuth(): void {
     return;
   }
 
-  // The backend GET /api/github/auth uses authenticateToken middleware.
-  // Since it's a browser redirect (not XHR), we cannot send the Bearer header.
-  // Solution: pass token in query string and read it in the middleware, OR
-  // use a pre-authorized redirect URL approach.
-  //
-  // We use a short-lived approach: store token in sessionStorage then redirect.
-  // The backend will read Authorization from the query param via a wrapper.
   const baseUrl = api.defaults.baseURL || 'http://localhost:5001/api';
-  // Clean /api suffix and append github/auth with token
   const backendBase = baseUrl.replace(/\/api$/, '');
   window.location.href = `${backendBase}/api/github/auth?token=${encodeURIComponent(token)}`;
 }
@@ -87,6 +85,13 @@ export async function getGitHubStatus(): Promise<GitHubStatus> {
 
 export async function getRepositories(page: number = 1): Promise<GitHubRepo[]> {
   const res = await api.get<{ success: boolean; data: GitHubRepo[] }>(`/github/repositories?page=${page}`);
+  return res.data.data;
+}
+
+export async function getRepoBranches(owner: string, repo: string): Promise<GitHubBranch[]> {
+  const res = await api.get<{ success: boolean; data: GitHubBranch[] }>(
+    `/github/repositories/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches`
+  );
   return res.data.data;
 }
 
@@ -113,4 +118,3 @@ export async function toggleAutoPush(auto_push: boolean): Promise<boolean> {
   });
   return res.data.data.auto_push_on_accept;
 }
-

@@ -6,10 +6,12 @@ import {
   handleCallback,
   getGitHubStatus,
   getRepositories,
+  getBranches,
   selectRepository,
   pushSolution,
   disconnectGitHub,
   toggleAutoPush,
+  getGitHubHealth,
 } from '../controllers/github.controller';
 
 const router = Router();
@@ -29,19 +31,24 @@ const githubRateLimiter = rateLimit({
 
 router.use(githubRateLimiter);
 
+// ---- Public: GitHub configuration health check (no auth required) ----
+// Useful for debugging deployment: GET /api/github/health
+router.get('/health', getGitHubHealth);
+
 // ---- OAuth Flow ----
 // Initiates OAuth — requires user to be logged in (JWT auth)
+// JWT is passed as ?token= query param because browser redirects can't set custom headers.
 router.get('/auth', authenticateToken, initiateOAuth);
 
-// OAuth callback — GitHub redirects here; state in DB identifies the user
-// NOTE: This is NOT protected by authenticateToken because the browser
-// arrives here from GitHub's redirect without our JWT header.
-// Security is provided by the CSRF state stored in github_oauth_states.
+// OAuth callback — GitHub redirects here after the user approves/denies access.
+// NOT protected by authenticateToken — browser arrives here from GitHub without our JWT.
+// Security is enforced by the CSRF state stored in github_oauth_states table.
 router.get('/callback', handleCallback);
 
-// ---- Authenticated Endpoints ----
+// ---- Authenticated Endpoints (require valid portal JWT) ----
 router.get('/status', authenticateToken, getGitHubStatus);
 router.get('/repositories', authenticateToken, getRepositories);
+router.get('/repositories/:owner/:repo/branches', authenticateToken, getBranches);
 router.post('/select-repository', authenticateToken, selectRepository);
 router.post('/push', authenticateToken, pushSolution);
 router.post('/auto-push', authenticateToken, toggleAutoPush);
