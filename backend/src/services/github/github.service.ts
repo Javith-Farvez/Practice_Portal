@@ -333,9 +333,22 @@ export async function revokeToken(accessToken: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Path Sanitization Helper
+// ---------------------------------------------------------------------------
+export function sanitizePathSegment(name: string, fallback: string = 'General'): string {
+  const cleaned = (name || '')
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '_')
+    .substring(0, 80);
+  return cleaned || fallback;
+}
+
+// ---------------------------------------------------------------------------
 // Generate solution file content for push
 // ---------------------------------------------------------------------------
 export function generateJavaSolutionContent(params: {
+  problemId?: number | string;
   problemTitle: string;
   problemDescription: string;
   difficulty: string;
@@ -343,17 +356,31 @@ export function generateJavaSolutionContent(params: {
   code: string;
   username: string;
   pushedAt: string;
+  status?: string;
 }): string {
-  const { problemTitle, problemDescription, difficulty, topicName, code, username, pushedAt } = params;
+  const {
+    problemId,
+    problemTitle,
+    problemDescription,
+    difficulty,
+    topicName,
+    code,
+    username,
+    pushedAt,
+    status = 'Solved / Accepted',
+  } = params;
+
   return `/**
  * Problem: ${problemTitle}
+ * Problem ID: ${problemId || 'N/A'}
  * Topic: ${topicName}
  * Difficulty: ${difficulty}
- * Pushed by: ${username}
+ * Status: ${status}
+ * Author: ${username}
  * Pushed at: ${pushedAt}
  *
  * Description:
- * ${problemDescription.replace(/\n/g, '\n * ')}
+ * ${(problemDescription || '').replace(/\n/g, '\n * ')}
  */
 
 ${code}
@@ -361,41 +388,62 @@ ${code}
 }
 
 export function generateReadmeContent(params: {
+  problemId?: number | string;
   problemTitle: string;
   difficulty: string;
   topicName: string;
   problemDescription: string;
-  javaFilePath: string;
-  commitUrl: string;
+  explanation?: string;
+  javaFileName?: string;
+  commitUrl?: string;
   username: string;
   pushedAt: string;
+  status?: string;
 }): string {
-  const { problemTitle, difficulty, topicName, problemDescription, javaFilePath, commitUrl, username, pushedAt } = params;
-  const difficultyBadge = difficulty === 'EASY'
+  const {
+    problemId,
+    problemTitle,
+    difficulty,
+    topicName,
+    problemDescription,
+    explanation,
+    javaFileName = 'Solution.java',
+    commitUrl,
+    username,
+    pushedAt,
+    status = 'Solved / Accepted',
+  } = params;
+
+  const difficultyBadge = difficulty?.toUpperCase() === 'EASY'
     ? '🟢 Easy'
-    : difficulty === 'MEDIUM'
+    : difficulty?.toUpperCase() === 'MEDIUM'
     ? '🟡 Medium'
     : '🔴 Hard';
 
   return `# ${problemTitle}
 
-| Field | Value |
-|-------|-------|
-| **Difficulty** | ${difficultyBadge} |
+| Field | Details |
+|---|---|
+| **Problem ID** | \`${problemId || 'N/A'}\` |
 | **Topic** | ${topicName} |
-| **Pushed by** | ${username} |
+| **Difficulty** | ${difficultyBadge} |
+| **Submission Status** | ✅ ${status} |
+| **Author** | [@${username}](https://github.com/${username}) |
 | **Date** | ${pushedAt} |
 
 ## Problem Description
 
-${problemDescription}
+${problemDescription || 'No description provided.'}
 
+${explanation ? `## Explanation\n\n${explanation}\n` : ''}
 ## Solution
 
-See: [\`${javaFilePath}\`](${javaFilePath})
+- **Language:** Java
+- **Source Code:** [\`${javaFileName}\`](./${javaFileName})
 
 ---
 
-*Pushed from [Placement Practice Portal](https://practice-portal-mu.vercel.app) — [Commit](${commitUrl})*
+*Pushed from [Placement Practice Portal](https://practice-portal-mu.vercel.app)${commitUrl ? ` • [View Commit](${commitUrl})` : ''}*
 `;
 }
+

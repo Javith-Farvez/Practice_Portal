@@ -4,6 +4,7 @@ import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { ProblemCodeEditor } from '../components/ProblemCodeEditor';
 import { GitHubPushButton } from '../components/GitHubPushButton';
+import { getGitHubStatus, pushSolution } from '../api/github';
 import {
   TestResultsPanel,
   RunData,
@@ -236,6 +237,28 @@ export const ProblemDetailPage: React.FC = () => {
         setSubmitData(res.data.data);
         if (res.data.data.status === 'ACCEPTED') {
           setProblem((prev) => (prev ? { ...prev, status: 'SOLVED' } : null));
+
+          // Auto-push to GitHub if student has enabled it in settings
+          (async () => {
+            try {
+              const ghStatus = await getGitHubStatus();
+              if (ghStatus?.connected && ghStatus?.selected_repo_full_name && ghStatus?.auto_push_on_accept) {
+                await pushSolution({
+                  problem_id: problem.id,
+                  problem_title: problem.title,
+                  problem_description: problem.description,
+                  difficulty: problem.difficulty,
+                  topic_name: problem.topic_name,
+                  explanation: problem.explanation,
+                  code,
+                  language: language.toLowerCase(),
+                  status: 'Solved / Accepted',
+                });
+              }
+            } catch {
+              // Best-effort auto push
+            }
+          })();
         } else {
           setProblem((prev) => (prev && prev.status !== 'SOLVED' ? { ...prev, status: 'ATTEMPTED' } : prev));
         }
@@ -410,6 +433,7 @@ export const ProblemDetailPage: React.FC = () => {
             problemDescription={problem.description}
             difficulty={problem.difficulty}
             topicName={problem.topic_name}
+            explanation={problem.explanation}
             code={code}
             language={language.toLowerCase()}
           />

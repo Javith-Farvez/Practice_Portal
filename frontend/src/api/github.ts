@@ -14,6 +14,7 @@ export interface GitHubStatus {
   selected_repo_name?: string;
   selected_branch?: string;
   is_private_repo?: boolean;
+  auto_push_on_accept?: boolean;
   token_scope?: string;
   connected_at?: string;
 }
@@ -37,8 +38,10 @@ export interface PushSolutionParams {
   problem_description: string;
   difficulty: string;
   topic_name: string;
+  explanation?: string;
   code: string;
   language?: string;
+  status?: string;
 }
 
 export interface PushSolutionResult {
@@ -103,3 +106,11 @@ export async function pushSolution(params: PushSolutionParams): Promise<PushSolu
 export async function disconnectGitHub(): Promise<void> {
   await api.delete('/github/disconnect');
 }
+
+export async function toggleAutoPush(auto_push: boolean): Promise<boolean> {
+  const res = await api.post<{ success: boolean; data: { auto_push_on_accept: boolean } }>('/github/auto-push', {
+    auto_push,
+  });
+  return res.data.data.auto_push_on_accept;
+}
+

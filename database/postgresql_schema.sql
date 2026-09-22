@@ -354,6 +354,7 @@ CREATE TABLE IF NOT EXISTS github_connections (
     selected_repo_name      VARCHAR(255),
     selected_branch         VARCHAR(255) DEFAULT 'main',
     is_private_repo         BOOLEAN DEFAULT FALSE,
+    auto_push_on_accept     BOOLEAN DEFAULT FALSE,
     connected_at            TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at              TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

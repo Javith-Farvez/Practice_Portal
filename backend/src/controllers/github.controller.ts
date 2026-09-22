@@ -13,6 +13,7 @@ import {
   revokeToken,
   generateJavaSolutionContent,
   generateReadmeContent,
+  sanitizePathSegment,
   GitHubFile,
 } from '../services/github/github.service';
 
@@ -22,6 +23,19 @@ import {
 function isGitHubConfigured(): boolean {
   return !!(ENV.GITHUB.CLIENT_ID && ENV.GITHUB.CLIENT_SECRET &&
     ENV.GITHUB.CLIENT_ID !== 'your_github_client_id_here');
+}
+
+// ---------------------------------------------------------------------------
+// Helper: Resolve frontend base URL for OAuth redirects
+// ---------------------------------------------------------------------------
+function getFrontendUrl(): string {
+  if (ENV.CLIENT_URL && !ENV.CLIENT_URL.includes('localhost')) {
+    return ENV.CLIENT_URL;
+  }
+  if (ENV.NODE_ENV === 'production') {
+    return 'https://practice-portal-mu.vercel.app';
+  }
+  return ENV.CLIENT_URL || 'http://localhost:5173';
 }
 
 // ---------------------------------------------------------------------------
@@ -66,7 +80,7 @@ export const initiateOAuth = async (req: Request, res: Response): Promise<void> 
     res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
   } catch (error: any) {
     console.error('[GitHub] initiateOAuth error:', error.message);
-    const frontendUrl = ENV.CLIENT_URL || 'http://localhost:5173';
+    const frontendUrl = getFrontendUrl();
     res.redirect(`${frontendUrl}/settings?github=error&reason=state_failed`);
   }
 };
@@ -76,7 +90,7 @@ export const initiateOAuth = async (req: Request, res: Response): Promise<void> 
 // GitHub redirects here after user approves/denies access.
 // ---------------------------------------------------------------------------
 export const handleCallback = async (req: Request, res: Response): Promise<void> => {
-  const frontendUrl = ENV.CLIENT_URL || 'http://localhost:5173';
+  const frontendUrl = getFrontendUrl();
   const { code, state, error: oauthError } = req.query as Record<string, string>;
 
   // User denied access
@@ -152,7 +166,7 @@ export const handleCallback = async (req: Request, res: Response): Promise<void>
     res.redirect(`${frontendUrl}/settings?github=connected&username=${encodeURIComponent(ghUser.login)}`);
   } catch (error: any) {
     console.error('[GitHub] handleCallback error:', error.message);
-    const frontendUrl2 = ENV.CLIENT_URL || 'http://localhost:5173';
+    const frontendUrl2 = getFrontendUrl();
     res.redirect(`${frontendUrl2}/settings?github=error&reason=callback_failed`);
   }
 };
@@ -168,7 +182,7 @@ export const getGitHubStatus = async (req: Request, res: Response): Promise<void
     const result = await pool.query(
       `SELECT github_username, github_avatar_url, github_profile_url,
               selected_repo_full_name, selected_repo_owner, selected_repo_name,
-              selected_branch, is_private_repo, token_scope, connected_at
+              selected_branch, is_private_repo, token_scope, auto_push_on_accept, connected_at
        FROM github_connections WHERE user_id = $1`,
       [userId]
     );
@@ -198,6 +212,7 @@ export const getGitHubStatus = async (req: Request, res: Response): Promise<void
         selected_repo_name: row.selected_repo_name,
         selected_branch: row.selected_branch || 'main',
         is_private_repo: row.is_private_repo,
+        auto_push_on_accept: Boolean(row.auto_push_on_accept),
         token_scope: row.token_scope,
         connected_at: row.connected_at,
       },
@@ -337,8 +352,43 @@ export const selectRepository = async (req: Request, res: Response): Promise<voi
 };
 
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// POST /api/github/auto-push
+// Toggle auto-push on acceptance setting for current user.
+// ---------------------------------------------------------------------------
+export const toggleAutoPush = async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user!.id;
+  const { auto_push } = req.body as { auto_push: boolean };
+
+  try {
+    const result = await pool.query(
+      `UPDATE github_connections
+       SET auto_push_on_accept = $1, updated_at = NOW()
+       WHERE user_id = $2
+       RETURNING auto_push_on_accept`,
+      [Boolean(auto_push), userId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(400).json({ success: false, message: 'GitHub account not connected.', data: null });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: `Auto-push ${auto_push ? 'enabled' : 'disabled'} successfully.`,
+      data: { auto_push_on_accept: result.rows[0].auto_push_on_accept },
+    });
+  } catch (error: any) {
+    console.error('[GitHub] toggleAutoPush error:', error.message);
+    res.status(500).json({ success: false, message: 'Failed to update auto-push setting.', data: null });
+  }
+};
+
+// ---------------------------------------------------------------------------
 // POST /api/github/push
 // Push a Java solution and README to the user's selected GitHub repository.
+// Path structure: placement-solutions/Java/<Topic-Name>/<Problem-Name>/Solution.java + README.md
 // ---------------------------------------------------------------------------
 export const pushSolution = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user!.id;
@@ -348,16 +398,20 @@ export const pushSolution = async (req: Request, res: Response): Promise<void> =
     problem_description,
     difficulty,
     topic_name,
+    explanation,
     code,
     language = 'java',
+    status = 'Solved / Accepted',
   } = req.body as {
     problem_id?: number;
     problem_title: string;
-    problem_description: string;
-    difficulty: string;
-    topic_name: string;
+    problem_description?: string;
+    difficulty?: string;
+    topic_name?: string;
+    explanation?: string;
     code: string;
     language?: string;
+    status?: string;
   };
 
   if (!problem_title || !code) {
@@ -391,39 +445,65 @@ export const pushSolution = async (req: Request, res: Response): Promise<void> =
     const accessToken = decryptToken(row.encrypted_access_token, row.encryption_iv);
     const pushedAt = new Date().toISOString();
 
-    // Build file paths
-    const safeTitle = problem_title
-      .replace(/[^a-zA-Z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
-      .substring(0, 60);
-    const safeTopicFolder = topic_name
-      .replace(/[^a-zA-Z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
-      .toLowerCase();
+    // Query DB for complete metadata if problem_id is provided
+    let finalTitle = problem_title;
+    let finalDescription = problem_description || '';
+    let finalTopic = topic_name || 'Practice';
+    let finalDifficulty = difficulty || 'MEDIUM';
+    let finalExplanation = explanation || '';
 
-    const ext = language === 'java' ? 'java' : 'txt';
-    const javaFilePath = `solutions/${safeTopicFolder}/${safeTitle}.${ext}`;
-    const readmePath = `solutions/${safeTopicFolder}/${safeTitle}_README.md`;
+    if (problem_id) {
+      try {
+        const probRes = await pool.query(
+          `SELECT p.title, p.description, p.difficulty, p.explanation, t.name as topic_name
+           FROM problems p
+           LEFT JOIN topics t ON t.id = p.topic_id
+           WHERE p.id = $1`,
+          [problem_id]
+        );
+        if (probRes.rows.length > 0) {
+          const pr = probRes.rows[0];
+          finalTitle = finalTitle || pr.title;
+          finalDescription = finalDescription || pr.description || '';
+          finalTopic = (finalTopic !== 'Practice' && finalTopic) ? finalTopic : (pr.topic_name || 'Practice');
+          finalDifficulty = finalDifficulty || pr.difficulty || 'MEDIUM';
+          finalExplanation = finalExplanation || pr.explanation || '';
+        }
+      } catch {
+        // Fallback gracefully
+      }
+    }
+
+    // Build directory & file paths:
+    // placement-solutions/Java/<Topic-Name>/<Problem-Name>/Solution.java + README.md
+    const safeTopic = sanitizePathSegment(finalTopic, 'General');
+    const safeProblem = sanitizePathSegment(finalTitle, 'Solution');
+    const basePath = `placement-solutions/Java/${safeTopic}/${safeProblem}`;
+    const javaFileName = 'Solution.java';
+    const javaFilePath = `${basePath}/${javaFileName}`;
+    const readmePath = `${basePath}/README.md`;
 
     const javaContent = generateJavaSolutionContent({
-      problemTitle: problem_title,
-      problemDescription: problem_description,
-      difficulty,
-      topicName: topic_name,
+      problemId: problem_id,
+      problemTitle: finalTitle,
+      problemDescription: finalDescription,
+      difficulty: finalDifficulty,
+      topicName: finalTopic,
       code,
       username: row.portal_username || row.github_username,
       pushedAt,
+      status,
     });
 
     const files: GitHubFile[] = [
       {
         path: javaFilePath,
         content: javaContent,
-        message: `feat: Add solution for "${problem_title}" [${difficulty}]`,
+        message: `feat: Add Java solution for "${finalTitle}" [${finalDifficulty}]`,
       },
     ];
 
-    // Push files
+    // Push Java file first
     const pushResult = await pushFilesToGitHub(
       accessToken,
       row.selected_repo_owner,
@@ -434,14 +514,17 @@ export const pushSolution = async (req: Request, res: Response): Promise<void> =
 
     // Now generate README with actual commit URL
     const readmeContent = generateReadmeContent({
-      problemTitle: problem_title,
-      difficulty,
-      topicName: topic_name,
-      problemDescription: problem_description,
-      javaFilePath,
+      problemId: problem_id,
+      problemTitle: finalTitle,
+      difficulty: finalDifficulty,
+      topicName: finalTopic,
+      problemDescription: finalDescription,
+      explanation: finalExplanation,
+      javaFileName,
       commitUrl: pushResult.commitUrl,
       username: row.portal_username || row.github_username,
       pushedAt,
+      status,
     });
 
     // Push README (separate commit, best effort)
@@ -455,7 +538,7 @@ export const pushSolution = async (req: Request, res: Response): Promise<void> =
           {
             path: readmePath,
             content: readmeContent,
-            message: `docs: Add README for "${problem_title}"`,
+            message: `docs: Add README for "${finalTitle}"`,
           },
         ]
       );

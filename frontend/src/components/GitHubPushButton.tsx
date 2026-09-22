@@ -20,6 +20,8 @@ interface GitHubPushButtonProps {
   problemDescription: string;
   difficulty: string;
   topicName: string;
+  explanation?: string;
+  statusText?: string;
   code: string;
   language?: string;
   compact?: boolean;
@@ -31,6 +33,8 @@ export const GitHubPushButton: React.FC<GitHubPushButtonProps> = ({
   problemDescription,
   difficulty,
   topicName,
+  explanation,
+  statusText = 'Solved / Accepted',
   code,
   language = 'java',
   compact = false,
@@ -82,8 +86,10 @@ export const GitHubPushButton: React.FC<GitHubPushButtonProps> = ({
         problem_description: problemDescription,
         difficulty,
         topic_name: topicName,
+        explanation,
         code,
         language,
+        status: statusText,
       });
 
       setResult({
@@ -98,17 +104,20 @@ export const GitHubPushButton: React.FC<GitHubPushButtonProps> = ({
     }
   };
 
-  // Safe file paths preview
-  const safeTopicFolder = (topicName || 'practice')
-    .replace(/[^a-zA-Z0-9\s]/g, '')
+  // Safe file paths preview (placement-solutions/Java/<Topic-Name>/<Problem-Name>/Solution.java)
+  const safeTopicFolder = (topicName || 'Practice')
+    .trim()
+    .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '_')
-    .toLowerCase();
+    .substring(0, 80) || 'General';
   const safeTitle = (problemTitle || 'Solution')
-    .replace(/[^a-zA-Z0-9\s]/g, '')
+    .trim()
+    .replace(/[^\w\s-]/g, '')
     .replace(/\s+/g, '_')
-    .substring(0, 50);
-  const javaFilePath = `solutions/${safeTopicFolder}/${safeTitle}.java`;
-  const readmeFilePath = `solutions/${safeTopicFolder}/${safeTitle}_README.md`;
+    .substring(0, 80) || 'Problem';
+  const basePath = `placement-solutions/Java/${safeTopicFolder}/${safeTitle}`;
+  const javaFilePath = `${basePath}/Solution.java`;
+  const readmeFilePath = `${basePath}/README.md`;
 
   return (
     <>

@@ -13,6 +13,7 @@ import {
   Globe,
   Loader2,
   Link as LinkIcon,
+  Zap,
 } from 'lucide-react';
 import {
   getGitHubStatus,
@@ -20,6 +21,7 @@ import {
   selectRepository,
   disconnectGitHub,
   initiateGitHubOAuth,
+  toggleAutoPush,
   GitHubStatus,
   GitHubRepo,
 } from '../api/github';
@@ -34,6 +36,8 @@ export const GitHubConnect: React.FC = () => {
   const [selectedBranch, setSelectedBranch] = useState<string>('main');
   const [savingRepo, setSavingRepo] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [autoPush, setAutoPush] = useState(false);
+  const [togglingAutoPush, setTogglingAutoPush] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   // Check URL query parameters on return from OAuth
@@ -76,6 +80,7 @@ export const GitHubConnect: React.FC = () => {
       setLoading(true);
       const data = await getGitHubStatus();
       setStatus(data);
+      setAutoPush(Boolean(data.auto_push_on_accept));
       if (data.connected && data.selected_repo_full_name) {
         setSelectedRepoFullName(data.selected_repo_full_name);
         setSelectedBranch(data.selected_branch || 'main');
@@ -84,6 +89,30 @@ export const GitHubConnect: React.FC = () => {
       console.error('Failed to load GitHub status', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleAutoPush = async () => {
+    try {
+      setTogglingAutoPush(true);
+      const nextVal = !autoPush;
+      const res = await toggleAutoPush(nextVal);
+      setAutoPush(res);
+      setMessage({
+        type: 'success',
+        text: `Auto-push ${res ? 'enabled' : 'disabled'}. ${
+          res
+            ? 'Java solutions will automatically be pushed to GitHub whenever your submission is Accepted.'
+            : 'Solutions will only be pushed when you manually click "Push to GitHub".'
+        }`,
+      });
+    } catch (err: any) {
+      setMessage({
+        type: 'error',
+        text: err.response?.data?.message || 'Failed to update auto-push setting.',
+      });
+    } finally {
+      setTogglingAutoPush(false);
     }
   };
 
@@ -432,6 +461,41 @@ export const GitHubConnect: React.FC = () => {
                 </button>
               </div>
             )}
+
+            {/* Auto-Push Setting */}
+            <div className="pt-4 border-t border-[#E5DED4] dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs font-bold text-[#17211B] dark:text-white">
+                    Auto-push on Accepted Submission
+                  </span>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">
+                    Optional (default: off)
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#5F665F] dark:text-slate-400">
+                  When enabled, your Java solution is automatically pushed to your repository whenever all test cases pass.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleToggleAutoPush}
+                disabled={togglingAutoPush || !status.selected_repo_full_name}
+                title={!status.selected_repo_full_name ? 'Please select a repository first' : 'Toggle auto-push'}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-40 self-start sm:self-auto ${
+                  autoPush ? 'bg-[#244D38]' : 'bg-slate-300 dark:bg-slate-700'
+                }`}
+                role="switch"
+                aria-checked={autoPush}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    autoPush ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </div>
       ) : (

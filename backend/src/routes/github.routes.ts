@@ -9,6 +9,7 @@ import {
   selectRepository,
   pushSolution,
   disconnectGitHub,
+  toggleAutoPush,
 } from '../controllers/github.controller';
 
 const router = Router();
@@ -43,6 +44,8 @@ router.get('/status', authenticateToken, getGitHubStatus);
 router.get('/repositories', authenticateToken, getRepositories);
 router.post('/select-repository', authenticateToken, selectRepository);
 router.post('/push', authenticateToken, pushSolution);
+router.post('/auto-push', authenticateToken, toggleAutoPush);
+router.post('/disconnect', authenticateToken, disconnectGitHub);
 router.delete('/disconnect', authenticateToken, disconnectGitHub);
 
 export default router;
