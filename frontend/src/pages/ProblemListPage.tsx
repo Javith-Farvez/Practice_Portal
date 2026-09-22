@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api/axios';
 import { ProblemCardSkeleton } from '../components/Skeleton';
 import {
@@ -37,6 +37,7 @@ interface SubjectSummary {
 }
 
 export const ProblemListPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Filter states initialized from URL search params
@@ -370,10 +371,10 @@ export const ProblemListPage: React.FC = () => {
       ) : (
         <div className="space-y-3">
           {problems.map((prob) => (
-            <Link
+            <div
               key={prob.id}
-              to={`/problems/${prob.id}`}
-              className="group bg-white dark:bg-[#0D121F] rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              onClick={() => navigate(`/problems/${prob.id}`)}
+              className="group bg-white dark:bg-[#0D121F] rounded-2xl p-5 border border-slate-200 dark:border-slate-800 hover:border-brand-500/50 shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer"
             >
               <div className="flex items-start sm:items-center gap-3.5 min-w-0">
                 {/* Solved Status */}
@@ -392,9 +393,13 @@ export const ProblemListPage: React.FC = () => {
                     <span className="font-mono text-xs text-slate-400 shrink-0">
                       #{prob.id}
                     </span>
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate group-hover:text-brand-500 transition-colors">
+                    <Link
+                      to={`/problems/${prob.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate hover:text-brand-500 transition-colors"
+                    >
                       {prob.title}
-                    </h3>
+                    </Link>
                   </div>
 
                   {/* Metadata Chips: Topic, Subject, Level, Status */}
@@ -413,11 +418,17 @@ export const ProblemListPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Right Side: Difficulty badge & interactive bookmark button */}
-              <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+              {/* Right Side: Difficulty badge, Bookmark, and Code Now button */}
+              <div
+                className="flex items-center gap-3 self-end sm:self-auto shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <button
                   type="button"
-                  onClick={(e) => handleToggleBookmark(e, prob.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleToggleBookmark(e, prob.id);
+                  }}
                   title={prob.is_bookmarked ? 'Remove Bookmark' : 'Bookmark Problem'}
                   className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-amber-500 transition-colors"
                 >
@@ -436,11 +447,18 @@ export const ProblemListPage: React.FC = () => {
                   {prob.difficulty}
                 </span>
 
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-brand-500 group-hover:translate-x-1 transition-all" />
+                <Link
+                  to={`/problems/${prob.id}`}
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-brand-600 hover:bg-brand-500 shadow-sm transition-all flex items-center gap-1.5"
+                >
+                  <span>Code Now</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
+
       )}
 
       {/* Pagination Bar */}

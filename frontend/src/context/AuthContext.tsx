@@ -46,12 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(response.data.data.user);
         localStorage.setItem('user', JSON.stringify(response.data.data.user));
       }
-    } catch (error) {
-      console.warn('Session verification failed, logging out.');
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setUser(null);
-      setToken(null);
+    } catch (error: any) {
+      if (error?.response?.status === 401) {
+        console.warn('Session verification failed (401 Unauthorized), logging out.');
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        setToken(null);
+      } else {
+        console.warn('Network or server error during session verification, preserving cached session.');
+      }
     } finally {
       setIsLoading(false);
     }

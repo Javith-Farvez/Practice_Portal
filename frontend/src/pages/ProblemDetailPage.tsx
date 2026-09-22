@@ -50,7 +50,9 @@ interface ProblemDetail {
   explanation?: string;
   hints: string[];
   supported_languages: string[];
-  status: 'SOLVED' | 'UNSOLVED' | 'ATTEMPTED';
+  status: 'SOLVED' | 'UNSOLVED' | 'ATTEMPTED' | 'PUBLISHED';
+  user_status?: 'SOLVED' | 'UNSOLVED' | 'ATTEMPTED';
+  starter_code?: string;
   is_bookmarked: boolean;
   solved_at?: string;
 }
@@ -88,12 +90,14 @@ export const ProblemDetailPage: React.FC = () => {
   // Load code from LocalStorage or template
   const getDraftKey = (probId: number, lang: string) => `placement_code_${probId}_${lang}`;
 
-  const loadCodeForLanguage = (targetLang: 'JAVA' = 'JAVA') => {
+  const loadCodeForLanguage = (targetLang: 'JAVA' = 'JAVA', starterCode?: string) => {
     if (!id) return;
     const key = getDraftKey(Number(id), targetLang);
     const saved = localStorage.getItem(key);
     if (saved && saved.trim() !== '') {
       setCode(saved);
+    } else if (starterCode && starterCode.trim() !== '') {
+      setCode(starterCode);
     } else {
       setCode(DEFAULT_TEMPLATES[targetLang]);
     }
@@ -101,7 +105,7 @@ export const ProblemDetailPage: React.FC = () => {
 
   const handleLanguageChange = (newLang: 'JAVA') => {
     setLanguage(newLang);
-    loadCodeForLanguage(newLang);
+    loadCodeForLanguage(newLang, problem?.starter_code);
   };
 
   const handleCodeChange = (newVal: string | undefined) => {
@@ -114,7 +118,7 @@ export const ProblemDetailPage: React.FC = () => {
 
   const handleResetCode = () => {
     if (window.confirm(`Reset Java editor back to default starter code?`)) {
-      const template = DEFAULT_TEMPLATES[language];
+      const template = problem?.starter_code || DEFAULT_TEMPLATES[language];
       setCode(template);
       if (id) {
         localStorage.removeItem(getDraftKey(Number(id), language));
@@ -127,10 +131,11 @@ export const ProblemDetailPage: React.FC = () => {
     setError(null);
     try {
       const res = await api.get(`/problems/${id}`);
-      if (res.data.success) {
-        setProblem(res.data.data.problem);
+      if (res.data.success && res.data.data?.problem) {
+        const prob = res.data.data.problem;
+        setProblem(prob);
         setLanguage('JAVA');
-        loadCodeForLanguage('JAVA');
+        loadCodeForLanguage('JAVA', prob.starter_code);
       } else {
         setError(res.data.message || 'Problem not found.');
       }
@@ -292,14 +297,23 @@ export const ProblemDetailPage: React.FC = () => {
         <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
           <AlertCircle className="w-6 h-6" />
         </div>
-        <h2 className="text-xl font-bold text-[#17211B] dark:text-white">Problem Not Found</h2>
-        <p className="text-sm text-[#5F665F] dark:text-stone-400">{error || 'Could not load problem.'}</p>
-        <Link
-          to="/java"
-          className="inline-flex px-5 py-2.5 text-xs font-bold text-white bg-[#244D38] hover:bg-[#1B3B2B] rounded-xl shadow-sm"
-        >
-          Return to Java Curriculum
-        </Link>
+        <h2 className="text-xl font-bold text-[#17211B] dark:text-white">Unable to Load Problem</h2>
+        <p className="text-sm text-[#5F665F] dark:text-stone-400">{error || 'Could not load problem workspace.'}</p>
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={fetchProblem}
+            className="inline-flex px-5 py-2.5 text-xs font-bold text-white bg-[#244D38] hover:bg-[#1B3B2B] rounded-xl shadow-sm cursor-pointer"
+          >
+            Retry Loading
+          </button>
+          <Link
+            to="/problems"
+            className="inline-flex px-5 py-2.5 text-xs font-bold text-[#244D38] dark:text-emerald-400 bg-[#244D38]/10 hover:bg-[#244D38]/20 rounded-xl"
+          >
+            All Problems
+          </Link>
+        </div>
       </div>
     );
   }
@@ -316,6 +330,8 @@ export const ProblemDetailPage: React.FC = () => {
         return 'bg-[#244D38]/10 text-[#244D38] dark:text-stone-300 border-[#244D38]/20';
     }
   };
+
+  const currentSolvedStatus = problem.user_status || problem.status;
 
   return (
     <div className="w-full h-full flex flex-col space-y-3 pb-6">
@@ -344,12 +360,12 @@ export const ProblemDetailPage: React.FC = () => {
 
         {/* Solved Status & Bookmark Toggle */}
         <div className="flex items-center gap-2">
-          {problem.status === 'SOLVED' ? (
+          {currentSolvedStatus === 'SOLVED' ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-[#4E8A61]/15 text-[#244D38] dark:text-emerald-400 border border-[#4E8A61]/30">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Solved</span>
             </span>
-          ) : problem.status === 'ATTEMPTED' ? (
+          ) : currentSolvedStatus === 'ATTEMPTED' ? (
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
               <Clock className="w-3.5 h-3.5" />
               <span>Attempted</span>
@@ -360,6 +376,7 @@ export const ProblemDetailPage: React.FC = () => {
               <span>Not Started</span>
             </span>
           )}
+
 
           <button
             type="button"

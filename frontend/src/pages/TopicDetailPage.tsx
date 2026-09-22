@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import {
   BookOpen,
@@ -46,6 +46,7 @@ interface TopicData {
 
 export const TopicDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
 
   const [topic, setTopic] = useState<TopicData | null>(null);
   const [subtopics, setSubtopics] = useState<Subtopic[]>([]);
@@ -270,7 +271,8 @@ export const TopicDetailPage: React.FC = () => {
             {problems.map((prob, idx) => (
               <div
                 key={prob.id}
-                className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#FAF6EE]/70 dark:hover:bg-stone-800/40 transition-colors group"
+                onClick={() => navigate(`/problems/${prob.id}`)}
+                className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-[#FAF6EE]/70 dark:hover:bg-stone-800/40 transition-colors group cursor-pointer"
               >
                 <div className="flex items-center gap-4 min-w-0">
                   <span className="w-8 h-8 rounded-xl font-mono text-xs font-bold flex items-center justify-center bg-[#FAF6EE] dark:bg-stone-900 border border-[#E8DFC8] dark:border-stone-700 text-[#1F2421] dark:text-amber-200 shrink-0">
@@ -279,9 +281,13 @@ export const TopicDetailPage: React.FC = () => {
 
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-sm font-bold text-[#1F2421] dark:text-amber-50 truncate group-hover:text-[#E76F51] transition-colors">
+                      <Link
+                        to={`/problems/${prob.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-sm font-bold text-[#1F2421] dark:text-amber-50 truncate group-hover:text-[#E76F51] transition-colors"
+                      >
                         {prob.title}
-                      </h4>
+                      </Link>
                       {getStatusIndicator(prob.status)}
                     </div>
 
@@ -300,7 +306,10 @@ export const TopicDetailPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                <div
+                  className="flex items-center gap-3 shrink-0 self-end sm:self-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Link
                     to={`/problems/${prob.id}`}
                     className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-white bg-[#E76F51] hover:bg-[#d85e40] shadow-sm transition-all flex items-center gap-1.5"
