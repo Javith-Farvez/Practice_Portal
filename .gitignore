@@ -10,9 +10,12 @@ build/
 
 # Environment variables & secrets
 .env
+.env.*
 .env.local
 .env.*.local
 *.env
+secrets/
+secrets
 !*.env.example
 !.env.example
 

@@ -125,8 +125,31 @@ npm run test:phase8   # Placement Mode, Notifications & Security Tests (9 tests)
 
 ---
 
+## 🐙 Multi-User GitHub OAuth Integration
+
+Each student can independently link their own personal GitHub account to sync their problem solutions directly to a repository of their choice.
+
+- **Standard OAuth 2.0 Flow**: Users authenticate through GitHub without manual Personal Access Tokens (PAT).
+- **AES-256-CBC Token Encryption**: Access tokens are encrypted at rest with per-record IVs.
+- **Repository Selector**: Select target repository, branch, and verify write permissions.
+- **One-Click Push from Workspace**: Pushes `.java` solution and auto-generated problem `README.md` with difficulty badges and portal link.
+
+### GitHub OAuth Setup (Render / Production)
+
+Set the following variables in the backend environment:
+```env
+GITHUB_CLIENT_ID=your_github_client_id
+GITHUB_CLIENT_SECRET=your_github_client_secret
+GITHUB_CALLBACK_URL=https://practice-portal-kmri.onrender.com/api/github/callback
+GITHUB_OAUTH_SCOPES=read:user,repo
+GITHUB_ENCRYPTION_KEY=64_char_hex_encryption_key
+```
+
+---
+
 ## 📖 Documentation Links
 
 - [Complete REST API Documentation](docs/API.md)
 - [Security Architecture & Sandboxing](docs/SECURITY.md)
 - [Production Deployment Guide](docs/DEPLOYMENT.md)
+
