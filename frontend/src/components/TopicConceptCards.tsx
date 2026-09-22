@@ -1703,7 +1703,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({
         case 'substring(int begin, int end)':
           return { val: `"${s.substring(2, Math.min(8, s.length))}"`, type: 'String', note: `s.substring(2, 8) extracts indices [2..7]` };
         case 'compareTo(String string2)':
-          return { val: s.compareTo('Hello'), type: 'int', note: `Lexicographical ASCII difference vs "Hello"` };
+          return { val: s.localeCompare('Hello'), type: 'int', note: `Lexicographical ASCII difference vs "Hello"` };
         case 'toUpperCase()':
           return { val: `"${s.toUpperCase()}"`, type: 'String', note: `Converts all characters to uppercase` };
         case 'toLowerCase()':

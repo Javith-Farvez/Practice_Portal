@@ -49,6 +49,7 @@ export const App: React.FC = () => {
                 <Route path="/topics/:id" element={<TopicDetailPage />} />
                 <Route path="/problems" element={<ProblemListPage />} />
                 <Route path="/problems/:id" element={<ProblemDetailPage />} />
+                <Route path="/problems/:problemId" element={<ProblemDetailPage />} />
 
                 {/* Authenticated Student Features */}
                 <Route

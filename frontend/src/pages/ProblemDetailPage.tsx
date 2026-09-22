@@ -32,6 +32,7 @@ import {
 interface ProblemDetail {
   id: number;
   title: string;
+  slug?: string;
   description: string;
   subject_id: number;
   topic_id: number;
@@ -58,7 +59,8 @@ interface ProblemDetail {
 }
 
 export const ProblemDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id?: string; problemId?: string }>();
+  const activeId = params.id || params.problemId;
   const { user } = useAuth();
 
   const [problem, setProblem] = useState<ProblemDetail | null>(null);
@@ -91,8 +93,8 @@ export const ProblemDetailPage: React.FC = () => {
   const getDraftKey = (probId: number, lang: string) => `placement_code_${probId}_${lang}`;
 
   const loadCodeForLanguage = (targetLang: 'JAVA' = 'JAVA', starterCode?: string) => {
-    if (!id) return;
-    const key = getDraftKey(Number(id), targetLang);
+    if (!activeId) return;
+    const key = getDraftKey(Number(activeId), targetLang);
     const saved = localStorage.getItem(key);
     if (saved && saved.trim() !== '') {
       setCode(saved);
@@ -111,8 +113,8 @@ export const ProblemDetailPage: React.FC = () => {
   const handleCodeChange = (newVal: string | undefined) => {
     const val = newVal || '';
     setCode(val);
-    if (id) {
-      localStorage.setItem(getDraftKey(Number(id), language), val);
+    if (activeId) {
+      localStorage.setItem(getDraftKey(Number(activeId), language), val);
     }
   };
 
@@ -120,17 +122,22 @@ export const ProblemDetailPage: React.FC = () => {
     if (window.confirm(`Reset Java editor back to default starter code?`)) {
       const template = problem?.starter_code || DEFAULT_TEMPLATES[language];
       setCode(template);
-      if (id) {
-        localStorage.removeItem(getDraftKey(Number(id), language));
+      if (activeId) {
+        localStorage.removeItem(getDraftKey(Number(activeId), language));
       }
     }
   };
 
   const fetchProblem = async () => {
+    if (!activeId) {
+      setError('Invalid or missing problem ID.');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get(`/problems/${id}`);
+      const res = await api.get(`/problems/${activeId}`);
       if (res.data.success && res.data.data?.problem) {
         const prob = res.data.data.problem;
         setProblem(prob);
@@ -147,11 +154,11 @@ export const ProblemDetailPage: React.FC = () => {
   };
 
   const fetchSubmissions = async () => {
-    if (!id) return;
+    if (!activeId) return;
     setLoadingSubmissions(true);
     try {
       const res = await api.get('/submissions', {
-        params: { problem_id: id },
+        params: { problem_id: activeId },
       });
       if (res.data.success) {
         setSubmissions(res.data.data.submissions);
@@ -164,13 +171,13 @@ export const ProblemDetailPage: React.FC = () => {
   };
 
   useEffect(() => {
-    if (id) {
+    if (activeId) {
       fetchProblem();
       if (user) {
         fetchSubmissions();
       }
     }
-  }, [id, user]);
+  }, [activeId, user]);
 
   // Execute Public Tests
   const handleRun = async () => {

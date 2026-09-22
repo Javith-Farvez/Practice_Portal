@@ -66,25 +66,46 @@ export interface SubmitData {
   }[];
 }
 
+export interface SubmissionHistoryItem {
+  id: number;
+  problem_id: number;
+  user_id: number;
+  language: string;
+  status: string;
+  passed_tests: number;
+  total_tests: number;
+  runtime_ms: number;
+  memory_kb?: number;
+  created_at: string;
+}
+
 export interface TestResultsPanelProps {
   runData: RunData | null;
   submitData: SubmitData | null;
-  isRunning: boolean;
-  isSubmitting: boolean;
-  activeTab: 'testcase' | 'result';
-  onSelectTab: (tab: 'testcase' | 'result') => void;
+  activeView?: 'RUN' | 'SUBMIT' | 'HISTORY';
+  onViewChange: (view: 'RUN' | 'SUBMIT' | 'HISTORY') => void;
+  submissions?: SubmissionHistoryItem[];
+  isLoadingSubmissions?: boolean;
+  onRefreshSubmissions?: () => void;
+  topicName?: string;
+  problemSlug?: string;
   problemId?: number;
   code?: string;
   language?: string;
+  isRunning?: boolean;
+  isSubmitting?: boolean;
+  activeTab?: 'testcase' | 'result';
+  onSelectTab?: (tab: 'testcase' | 'result') => void;
 }
 
 export const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
   runData,
   submitData,
-  isRunning,
-  isSubmitting,
-  activeTab,
-  onSelectTab,
+  activeView = 'RUN',
+  onViewChange,
+  submissions = [],
+  isLoadingSubmissions = false,
+  onRefreshSubmissions = () => {},
 }) => {
   const [selectedTestCaseIndex, setSelectedTestCaseIndex] = useState<number>(0);
 

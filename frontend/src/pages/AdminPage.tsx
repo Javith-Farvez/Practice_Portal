@@ -11,6 +11,7 @@ import {
   XCircle,
   Code2,
   Terminal,
+  Coffee,
   Binary,
   BrainCircuit,
   Activity,

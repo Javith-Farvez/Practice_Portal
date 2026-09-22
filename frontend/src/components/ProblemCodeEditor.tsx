@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import Editor, { OnMount } from '@monaco-editor/react';
+import { ErrorBoundary } from './ErrorBoundary';
 import {
   Play,
   Send,
@@ -167,39 +168,56 @@ export const ProblemCodeEditor: React.FC<ProblemCodeEditorProps> = ({
         </div>
       </div>
 
-      {/* Monaco Editor Container */}
+      {/* Monaco Editor Container with Robust Fallback */}
       <div className="flex-1 w-full min-h-[350px] relative">
-        <Editor
-          height="100%"
-          language="java"
-          value={code}
-          onChange={onCodeChange}
-          onMount={handleEditorDidMount}
-          theme="placement-warm"
-          options={{
-            fontSize: 13.5,
-            fontFamily: "'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace",
-            fontLigatures: true,
-            lineNumbers: 'on',
-            minimap: { enabled: false },
-            automaticLayout: true,
-            tabSize: 4,
-            scrollBeyondLastLine: false,
-            wordWrap: 'on',
-            lineDecorationsWidth: 6,
-            lineNumbersMinChars: 3,
-            padding: { top: 12, bottom: 12 },
-            renderLineHighlight: 'all',
-            smoothScrolling: true,
-            cursorBlinking: 'smooth',
-          }}
-          loading={
-            <div className="flex items-center justify-center h-full gap-2 text-xs text-[#6E756D]">
-              <Loader2 className="w-4 h-4 animate-spin text-[#24543F]" />
-              <span>Loading Code Workspace...</span>
+        <ErrorBoundary
+          fallback={
+            <div className="w-full h-full p-4 flex flex-col bg-[#FAF8F2]">
+              <div className="text-xs text-[#6E756D] mb-2 font-semibold flex items-center justify-between">
+                <span>Standard Code Workspace</span>
+                <span className="text-[10px] text-[#A39A8C]">Plaintext Mode</span>
+              </div>
+              <textarea
+                value={code}
+                onChange={(e) => onCodeChange(e.target.value)}
+                className="flex-1 w-full font-mono text-xs p-3.5 rounded-2xl bg-[#FFFDF9] border border-[#DDD4C6] text-[#26352D] resize-none outline-none focus:border-[#24543F] leading-relaxed shadow-inner"
+                spellCheck={false}
+              />
             </div>
           }
-        />
+        >
+          <Editor
+            height="100%"
+            language="java"
+            value={code}
+            onChange={onCodeChange}
+            onMount={handleEditorDidMount}
+            theme="placement-warm"
+            options={{
+              fontSize: 13.5,
+              fontFamily: "'Fira Code', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace",
+              fontLigatures: true,
+              lineNumbers: 'on',
+              minimap: { enabled: false },
+              automaticLayout: true,
+              tabSize: 4,
+              scrollBeyondLastLine: false,
+              wordWrap: 'on',
+              lineDecorationsWidth: 6,
+              lineNumbersMinChars: 3,
+              padding: { top: 12, bottom: 12 },
+              renderLineHighlight: 'all',
+              smoothScrolling: true,
+              cursorBlinking: 'smooth',
+            }}
+            loading={
+              <div className="flex items-center justify-center h-full gap-2 text-xs text-[#6E756D]">
+                <Loader2 className="w-4 h-4 animate-spin text-[#24543F]" />
+                <span>Loading Code Workspace...</span>
+              </div>
+            }
+          />
+        </ErrorBoundary>
       </div>
 
       {/* Keyboard Shortcuts Hint Footer */}
