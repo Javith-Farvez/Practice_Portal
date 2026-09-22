@@ -19,7 +19,8 @@ export class JudgeService {
   public static async runPublicTests(
     problemId: number,
     language: Language,
-    sourceCode: string
+    sourceCode: string,
+    customInput?: string
   ): Promise<JudgeRunResult> {
     let testCases: any[] = [];
     try {
@@ -44,15 +45,6 @@ export class JudgeService {
       }
     }
 
-    if (testCases.length === 0) {
-      return {
-        status: 'SUCCESS',
-        totalPublicTests: 0,
-        passedPublicTests: 0,
-        results: [],
-      };
-    }
-
     const session = await SandboxExecutor.createSession(language, sourceCode);
     if (!session.success) {
       await session.cleanup();
@@ -67,8 +59,27 @@ export class JudgeService {
 
     const publicResults: PublicTestResultItem[] = [];
     let passedCount = 0;
+    let customResult: any = undefined;
 
     try {
+      // Execute custom input if provided
+      if (customInput !== undefined && customInput !== null && customInput.trim() !== '') {
+        const customExec = await session.execute(customInput, 6000);
+        let customError: string | undefined = undefined;
+        if (customExec.timedOut) {
+          customError = 'Time Limit Exceeded';
+        } else if (customExec.exitCode !== 0) {
+          customError = customExec.stderr || 'Runtime Error';
+        }
+        customResult = {
+          input: customInput,
+          actualOutput: customExec.stdout,
+          runtimeMs: customExec.runtimeMs,
+          error: customError,
+        };
+      }
+
+      // Execute public test cases
       for (let i = 0; i < testCases.length; i++) {
         const tc = testCases[i] as TestCaseItem;
         const execResult = await session.execute(tc.input, 6000);
@@ -106,6 +117,7 @@ export class JudgeService {
       status: 'SUCCESS',
       totalPublicTests: testCases.length,
       passedPublicTests: passedCount,
+      customResult,
       results: publicResults,
     };
   }

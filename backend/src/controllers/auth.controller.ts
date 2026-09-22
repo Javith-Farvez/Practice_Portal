@@ -7,10 +7,14 @@ import { ENV } from '../config/env';
 
 // Validation Schemas
 export const registerSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters long').max(100),
+  name: z.string().min(2, 'Name must be at least 2 characters long').max(100).optional(),
+  fullName: z.string().min(2).max(100).optional(),
   email: z.string().email('Please provide a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters long'),
+  password: z.string().min(6, 'Password must be at least 6 characters long'),
   role: z.enum(['STUDENT', 'ADMIN']).optional().default('STUDENT'),
+}).refine(data => data.name || data.fullName, {
+  message: 'Name is required',
+  path: ['name'],
 });
 
 export const loginSchema = z.object({
@@ -94,7 +98,8 @@ const generateToken = (user: { id: number; name: string; email: string; role: 'S
 // POST /api/auth/register
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { name, email, password } = req.body;
+    const name = req.body.name || req.body.fullName;
+    const { email, password } = req.body;
     const normalizedEmail = email.trim().toLowerCase();
 
     // Check if user already exists

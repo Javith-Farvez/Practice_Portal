@@ -24,11 +24,19 @@ export interface PublicTestItem {
   error?: string;
 }
 
+export interface CustomTestResult {
+  input: string;
+  actualOutput: string;
+  runtimeMs: number;
+  error?: string;
+}
+
 export interface RunData {
   status: 'SUCCESS' | 'ERROR';
   totalPublicTests: number;
   passedPublicTests: number;
   compilationError?: string;
+  customResult?: CustomTestResult;
   results: PublicTestItem[];
 }
 
@@ -233,6 +241,25 @@ export const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
               <div className="space-y-4">
                 {/* Test Cases Pill Switcher */}
                 <div className="flex flex-wrap gap-2 pb-3 border-b border-[#E5DDD0]">
+                  {runData.customResult && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTestCaseIndex(-1)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-mono font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                        selectedTestCaseIndex === -1
+                          ? 'bg-[#24543F] text-white shadow-xs'
+                          : 'bg-[#F8F5EE] border border-[#E5DDD0] text-[#6E756D] hover:bg-[#EDE8DE] hover:text-[#18251F]'
+                      }`}
+                    >
+                      <span>Custom Input</span>
+                      {runData.customResult.error ? (
+                        <X className={`w-3.5 h-3.5 stroke-[3] ${selectedTestCaseIndex === -1 ? 'text-red-300' : 'text-[#B95F3C]'}`} />
+                      ) : (
+                        <Check className={`w-3.5 h-3.5 stroke-[3] ${selectedTestCaseIndex === -1 ? 'text-emerald-300' : 'text-[#24543F]'}`} />
+                      )}
+                    </button>
+                  )}
+
                   {runData.results.map((tc, idx) => {
                     const isSelected = selectedTestCaseIndex === idx;
                     return (
@@ -257,8 +284,45 @@ export const TestResultsPanel: React.FC<TestResultsPanelProps> = ({
                   })}
                 </div>
 
+                {/* Custom Test Case Inspection */}
+                {selectedTestCaseIndex === -1 && runData.customResult && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-[#18251F]">Custom Input Execution:</span>
+                      <div className="flex items-center gap-1 text-[11px] text-[#6E756D] font-mono">
+                        <Clock className="w-3 h-3 text-[#A39A8C]" />
+                        <span>{runData.customResult.runtimeMs} ms</span>
+                      </div>
+                    </div>
+
+                    {runData.customResult.error && (
+                      <div className="p-3 rounded-2xl bg-[#FDF0ED] border border-[#F6C3B7] text-xs font-mono text-[#C53030]">
+                        {runData.customResult.error}
+                      </div>
+                    )}
+
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#6E756D] block mb-1">
+                        Input (stdin)
+                      </span>
+                      <pre className="p-3 rounded-xl bg-[#FAF8F2] border border-[#DDD4C6] text-xs font-mono text-[#18251F] overflow-x-auto whitespace-pre-wrap">
+                        {runData.customResult.input || '(Empty)'}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#24543F] block mb-1">
+                        Your Program Output
+                      </span>
+                      <pre className="p-3 rounded-xl bg-[#E8F3EB] border border-[#BEDAC6] text-xs font-mono text-[#24543F] font-semibold overflow-x-auto whitespace-pre-wrap">
+                        {runData.customResult.actualOutput || '(No output)'}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
                 {/* Selected Test Case Inspection */}
-                {runData.results[selectedTestCaseIndex] && (
+                {selectedTestCaseIndex >= 0 && runData.results[selectedTestCaseIndex] && (
                   <div className="space-y-3">
                     {/* Status & Runtime info */}
                     <div className="flex items-center justify-between text-xs">

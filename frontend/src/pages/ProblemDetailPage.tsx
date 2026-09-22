@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { ProblemCodeEditor } from '../components/ProblemCodeEditor';
+import { GitHubPushButton } from '../components/GitHubPushButton';
 import {
   TestResultsPanel,
   RunData,
@@ -78,6 +79,8 @@ export const ProblemDetailPage: React.FC = () => {
   const [code, setCode] = useState<string>(DEFAULT_TEMPLATES.JAVA);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [customInput, setCustomInput] = useState<string>('');
+  const [useCustomInput, setUseCustomInput] = useState<boolean>(false);
 
   // Results State
   const [runData, setRunData] = useState<RunData | null>(null);
@@ -190,6 +193,7 @@ export const ProblemDetailPage: React.FC = () => {
       const res = await api.post(`/problems/${problem.id}/run`, {
         language,
         source_code: code,
+        custom_input: useCustomInput && customInput.trim() !== '' ? customInput : undefined,
       });
 
       if (res.data.success) {
@@ -398,6 +402,17 @@ export const ProblemDetailPage: React.FC = () => {
           >
             <Bookmark className={`w-4 h-4 ${problem.is_bookmarked ? 'fill-amber-500' : ''}`} />
           </button>
+
+          {/* GitHub Push Integration */}
+          <GitHubPushButton
+            problemId={problem.id}
+            problemTitle={problem.title}
+            problemDescription={problem.description}
+            difficulty={problem.difficulty}
+            topicName={problem.topic_name}
+            code={code}
+            language={language.toLowerCase()}
+          />
         </div>
       </div>
 
@@ -628,6 +643,15 @@ export const ProblemDetailPage: React.FC = () => {
             onSubmit={handleSubmit}
             isRunning={isRunning}
             isSubmitting={isSubmitting}
+            customInput={customInput}
+            onCustomInputChange={setCustomInput}
+            useCustomInput={useCustomInput}
+            onToggleCustomInput={() => {
+              if (!useCustomInput && (!customInput || customInput.trim() === '')) {
+                setCustomInput(problem.sample_input && problem.sample_input !== 'No input' ? problem.sample_input : '');
+              }
+              setUseCustomInput(!useCustomInput);
+            }}
           />
         </div>
 

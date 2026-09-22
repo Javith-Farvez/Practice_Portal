@@ -87,6 +87,14 @@ export const initDatabase = async (): Promise<void> => {
     } else {
       console.warn(`[Database] Schema file not found at ${schemaPath}, skipping schema DDL execution.`);
     }
+
+    // 3. Load and execute GitHub integration migration if needed
+    const githubMigrationPath = path.resolve(__dirname, '../../../database/github_integration_migration.sql');
+    if (fs.existsSync(githubMigrationPath)) {
+      const migrationSql = fs.readFileSync(githubMigrationPath, 'utf8');
+      await pool.query(migrationSql);
+      console.log('[Database] Successfully verified and initialized GitHub integration tables');
+    }
   } catch (error) {
     console.error('[Database] Failed to initialize PostgreSQL database:', error);
     throw error;

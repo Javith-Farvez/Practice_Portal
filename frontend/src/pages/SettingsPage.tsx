@@ -9,6 +9,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { GitHubConnect } from '../components/GitHubConnect';
 
 export const SettingsPage: React.FC = () => {
   const { user, logout } = useAuth();
@@ -82,6 +83,9 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* GitHub Integration Card */}
+      <GitHubConnect />
 
       {/* Appearance & Preferences (Day Mode Only) */}
       <div className="bg-[#FFFDF9] rounded-3xl border border-[#E4DDD2] p-6 shadow-xs">

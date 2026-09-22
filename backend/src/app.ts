@@ -6,6 +6,7 @@ import adminRoutes from './routes/admin.routes';
 import learningRoutes from './routes/learning.routes';
 import notificationRoutes from './routes/notification.routes';
 import placementRoutes from './routes/placement.routes';
+import githubRoutes from './routes/github.routes';
 import { notFoundHandler, errorHandler } from './middleware/error.middleware';
 import { ENV } from './config/env';
 import { pool } from './config/db';
@@ -76,6 +77,7 @@ export const createApp = (): Application => {
   app.use('/api/admin', adminRoutes);
   app.use('/api/notifications', notificationRoutes);
   app.use('/api/placement', placementRoutes);
+  app.use('/api/github', githubRoutes);
   app.use('/api', learningRoutes);
 
   // 404 & Error Handling

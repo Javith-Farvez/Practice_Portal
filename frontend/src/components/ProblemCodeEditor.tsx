@@ -21,6 +21,10 @@ interface ProblemCodeEditorProps {
   onSubmit: () => void;
   isRunning: boolean;
   isSubmitting: boolean;
+  customInput?: string;
+  onCustomInputChange?: (value: string) => void;
+  useCustomInput?: boolean;
+  onToggleCustomInput?: () => void;
 }
 
 export const ProblemCodeEditor: React.FC<ProblemCodeEditorProps> = ({
@@ -32,6 +36,10 @@ export const ProblemCodeEditor: React.FC<ProblemCodeEditorProps> = ({
   onSubmit,
   isRunning,
   isSubmitting,
+  customInput = '',
+  onCustomInputChange,
+  useCustomInput = false,
+  onToggleCustomInput,
 }) => {
   const editorRef = useRef<any>(null);
 
@@ -100,6 +108,23 @@ export const ProblemCodeEditor: React.FC<ProblemCodeEditorProps> = ({
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
+          {/* Custom Input Toggle */}
+          {onToggleCustomInput && (
+            <button
+              type="button"
+              onClick={onToggleCustomInput}
+              title="Test with custom stdin input"
+              className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border ${
+                useCustomInput
+                  ? 'bg-[#24543F] text-white border-[#24543F]'
+                  : 'bg-[#FFFDF9] text-[#6E756D] border-[#DDD4C6] hover:bg-[#EAE3D6] hover:text-[#18251F]'
+              }`}
+            >
+              <span>Custom Input</span>
+              <span className="text-[10px]">{useCustomInput ? '▲' : '▼'}</span>
+            </button>
+          )}
+
           {/* Format Code */}
           <button
             type="button"
@@ -169,7 +194,7 @@ export const ProblemCodeEditor: React.FC<ProblemCodeEditorProps> = ({
       </div>
 
       {/* Monaco Editor Container with Robust Fallback */}
-      <div className="flex-1 w-full min-h-[350px] relative">
+      <div className="flex-1 w-full min-h-[300px] relative">
         <ErrorBoundary
           fallback={
             <div className="w-full h-full p-4 flex flex-col bg-[#FAF8F2]">
@@ -219,6 +244,26 @@ export const ProblemCodeEditor: React.FC<ProblemCodeEditorProps> = ({
           />
         </ErrorBoundary>
       </div>
+
+      {/* Expandable Custom Input Drawer */}
+      {useCustomInput && (
+        <div className="p-3 bg-[#F8F5EE] border-t border-[#DDD4C6] space-y-1.5 shrink-0 transition-all">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#24543F] flex items-center gap-1.5">
+              <Code2 className="w-3.5 h-3.5" />
+              <span>Custom Input (stdin)</span>
+            </span>
+            <span className="text-[10px] text-[#6E756D]">Passed to Scanner(System.in)</span>
+          </div>
+          <textarea
+            value={customInput}
+            onChange={(e) => onCustomInputChange && onCustomInputChange(e.target.value)}
+            placeholder="Type your custom input here (e.g. 15 30)..."
+            rows={2}
+            className="w-full font-mono text-xs p-2.5 rounded-xl bg-[#FFFDF9] border border-[#DDD4C6] text-[#18251F] resize-none outline-none focus:border-[#24543F] leading-relaxed shadow-inner"
+          />
+        </div>
+      )}
 
       {/* Keyboard Shortcuts Hint Footer */}
       <div className="px-4 py-2 bg-[#F3EEE5] border-t border-[#DDD4C6] flex items-center justify-between text-[11px] text-[#6E756D] shrink-0">

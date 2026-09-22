@@ -23,9 +23,10 @@ export const authenticateToken = (
   next: NextFunction
 ): void => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.startsWith('Bearer ')
+  const queryToken = typeof req.query.token === 'string' ? req.query.token : null;
+  const token = (authHeader && authHeader.startsWith('Bearer ')
     ? authHeader.split(' ')[1]
-    : null;
+    : null) || queryToken;
 
   if (!token) {
     res.status(401).json({
@@ -63,9 +64,10 @@ export const optionalAuth = (
   next: NextFunction
 ): void => {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.startsWith('Bearer ')
+  const queryToken = typeof req.query.token === 'string' ? req.query.token : null;
+  const token = (authHeader && authHeader.startsWith('Bearer ')
     ? authHeader.split(' ')[1]
-    : null;
+    : null) || queryToken;
 
   if (!token) {
     return next();

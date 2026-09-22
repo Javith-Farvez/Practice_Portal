@@ -39,11 +39,19 @@ export interface PublicTestResultItem {
   error?: string;
 }
 
+export interface CustomTestResult {
+  input: string;
+  actualOutput: string;
+  runtimeMs: number;
+  error?: string;
+}
+
 export interface JudgeRunResult {
   status: 'SUCCESS' | 'ERROR';
   totalPublicTests: number;
   passedPublicTests: number;
   compilationError?: string;
+  customResult?: CustomTestResult;
   results: PublicTestResultItem[];
 }
 

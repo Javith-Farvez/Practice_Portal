@@ -7,7 +7,7 @@ import { Language } from '../services/judge/types';
 export const runProblemCode = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const problemId = parseInt(req.params.id as string, 10);
-    const { language, source_code } = req.body;
+    const { language, source_code, custom_input, stdin } = req.body;
 
     if (isNaN(problemId)) {
       res.status(400).json({
@@ -36,8 +36,9 @@ export const runProblemCode = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
+    const rawCustomInput = typeof custom_input === 'string' ? custom_input : (typeof stdin === 'string' ? stdin : undefined);
     const normalizedLang = String(language).toUpperCase() as Language;
-    const result = await JudgeService.runPublicTests(problemId, normalizedLang, source_code);
+    const result = await JudgeService.runPublicTests(problemId, normalizedLang, source_code, rawCustomInput);
 
     res.status(200).json({
       success: true,

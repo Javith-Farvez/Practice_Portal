@@ -47,9 +47,14 @@ import {
 const router = Router();
 
 // Subject & Topic Roadmap Routes (Optional auth to include user solved stats)
+// Subject & Topic Roadmap Routes (Optional auth to include user solved stats)
 router.get('/subjects', optionalAuth, getSubjects);
 router.get('/subjects/:slug', optionalAuth, getSubjectBySlug);
 router.get('/topics/:id', optionalAuth, getTopicById);
+router.get('/topics/:id/problems', optionalAuth, (req, res, next) => {
+  req.query.topic_id = req.params.id;
+  getProblems(req, res, next);
+});
 
 // Problem Catalog & Details Routes
 router.get('/problems', optionalAuth, getProblems);
@@ -60,6 +65,7 @@ router.post('/problems/:id/toggle-solve', authenticateToken, toggleProblemSolve)
 router.post('/problems/:id/toggle-bookmark', authenticateToken, toggleProblemBookmark);
 router.post('/problems/:id/bookmark', authenticateToken, toggleProblemBookmark);
 router.get('/user/progress', authenticateToken, getUserDashboard); // Uses enhanced Phase 4 dashboard progress
+router.get('/progress', authenticateToken, getUserDashboard);
 
 // Phase 3: Code Execution & Judge Submissions
 router.post('/problems/:id/run', optionalAuth, runProblemCode);
@@ -73,6 +79,7 @@ router.get('/user/activity-heatmap', authenticateToken, getActivityHeatmap);
 router.get('/daily-practice', optionalAuth, getDailyPractice);
 router.get('/user/achievements', authenticateToken, getUserAchievements);
 router.get('/user/analytics', authenticateToken, getUserAnalytics);
+router.get('/analytics', authenticateToken, getUserAnalytics);
 
 // Phase 4: Dedicated Bookmarks
 router.post('/bookmarks', authenticateToken, addBookmark);
