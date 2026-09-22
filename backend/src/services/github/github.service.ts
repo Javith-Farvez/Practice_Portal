@@ -17,11 +17,13 @@ export class GitHubAuthError extends Error {
 // Encryption Helpers (AES-256-CBC)
 // ---------------------------------------------------------------------------
 function getEncryptionKey(): Buffer {
-  const hexKey = ENV.GITHUB.ENCRYPTION_KEY;
-  if (!hexKey || hexKey.length < 64) {
-    throw new Error('GITHUB_ENCRYPTION_KEY must be a 64-character hex string (32 bytes).');
+  const hexKey = ENV.GITHUB.ENCRYPTION_KEY?.trim();
+  if (hexKey && hexKey.length >= 64 && /^[0-9a-fA-F]+$/.test(hexKey.slice(0, 64))) {
+    return Buffer.from(hexKey.slice(0, 64), 'hex');
   }
-  return Buffer.from(hexKey.slice(0, 64), 'hex');
+  // Deterministically derive a secure 32-byte AES-256 key using SHA-256 over backend secrets
+  const seed = (ENV.JWT.SECRET || '') + (ENV.GITHUB.CLIENT_SECRET || '') + 'practice_portal_aes256_salt_seed';
+  return crypto.createHash('sha256').update(seed).digest();
 }
 
 export function encryptToken(plaintext: string): { encrypted: string; iv: string } {

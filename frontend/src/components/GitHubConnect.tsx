@@ -432,11 +432,10 @@ export const GitHubConnect: React.FC = () => {
             <span>GitHub OAuth App Not Configured — Action Required</span>
           </div>
           <p className="text-xs text-amber-700 dark:text-amber-400">
-            The backend is missing real values for{' '}
-            <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">GITHUB_CLIENT_ID</code>,{' '}
-            <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">GITHUB_CLIENT_SECRET</code>, and{' '}
-            <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">GITHUB_ENCRYPTION_KEY</code>.
-            These must be set in your{' '}
+            The backend is missing values for{' '}
+            <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">GITHUB_CLIENT_ID</code> and{' '}
+            <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 py-0.5 rounded">GITHUB_CLIENT_SECRET</code>.
+            Once you add these to your{' '}
             <a
               href="https://dashboard.render.com"
               target="_blank"
@@ -445,7 +444,7 @@ export const GitHubConnect: React.FC = () => {
             >
               Render backend environment variables
             </a>
-            .
+            , this notice will disappear and you can connect your account immediately.
           </p>
           <ol className="list-decimal list-inside space-y-1.5 text-xs text-amber-700 dark:text-amber-400 pl-1">
             <li>
@@ -462,32 +461,29 @@ export const GitHubConnect: React.FC = () => {
             </li>
             <li>
               Set <strong>Authorization callback URL</strong> to exactly:
-              <div className="mt-1 font-mono text-[11px] bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded select-all break-all">
+              <div className="mt-1 font-mono text-[11px] bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded select-all break-all font-semibold">
                 https://practice-portal-kmri.onrender.com/api/github/callback
+              </div>
+            </li>
+            <li>
+              Set <strong>Homepage URL</strong> to:
+              <div className="mt-1 font-mono text-[11px] bg-amber-100 dark:bg-amber-900/40 px-2 py-1 rounded select-all break-all">
+                https://practice-portal-mu.vercel.app
               </div>
             </li>
             <li>Copy the <strong>Client ID</strong> and generate a <strong>Client Secret</strong></li>
             <li>
-              Generate an encryption key:{' '}
-              <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">
-                node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-              </code>
-            </li>
-            <li>
               In Render → your backend service → <strong>Environment</strong> tab, add:
               <div className="mt-1.5 space-y-0.5 font-mono text-[11px] bg-amber-100 dark:bg-amber-900/40 px-2 py-1.5 rounded">
-                <div>GITHUB_CLIENT_ID=&lt;from step 3&gt;</div>
-                <div>GITHUB_CLIENT_SECRET=&lt;from step 3&gt;</div>
+                <div>GITHUB_CLIENT_ID=your_github_client_id</div>
+                <div>GITHUB_CLIENT_SECRET=your_github_client_secret</div>
                 <div>GITHUB_CALLBACK_URL=https://practice-portal-kmri.onrender.com/api/github/callback</div>
-                <div>GITHUB_OAUTH_SCOPES=read:user,repo</div>
-                <div>GITHUB_ENCRYPTION_KEY=&lt;64-char hex from step 4&gt;</div>
-                <div>CLIENT_URL=https://practice-portal-mu.vercel.app</div>
+                <div>FRONTEND_URL=https://practice-portal-mu.vercel.app</div>
               </div>
             </li>
-            <li>Click <strong>Manual Deploy → Deploy latest commit</strong> in Render</li>
           </ol>
           <p className="text-[11px] text-amber-600 dark:text-amber-500">
-            📖 See <strong>GITHUB_SETUP.md</strong> in the project root for the full guide.
+            📖 Both users (Javith-Farvez and kamalikasenthilnaathan09) will authorize independently through this single OAuth App.
           </p>
         </div>
       )}

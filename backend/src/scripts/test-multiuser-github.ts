@@ -267,7 +267,7 @@ async function runMultiUserVerification() {
     );
 
     // Simulate GitHubAuthError (HTTP 401 Bad credentials)
-    const simulatedError = new GitHubAuthError('GitHub access token has expired or was revoked.');
+    const simulatedError: any = new GitHubAuthError('GitHub access token has expired or was revoked.');
 
     // Simulated handler execution (same logic as handleGitHubError in controller)
     let reconnectRequired = false;

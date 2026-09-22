@@ -76,3 +76,8 @@ CREATE TABLE IF NOT EXISTS github_push_logs (
 
 CREATE INDEX IF NOT EXISTS idx_github_push_logs_user_id ON github_push_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_github_push_logs_problem_id ON github_push_logs(problem_id);
+
+-- ---------------------------------------------------------------------------
+-- 4. Alter submissions table to store github_commit_url
+-- ---------------------------------------------------------------------------
+ALTER TABLE submissions ADD COLUMN IF NOT EXISTS github_commit_url TEXT;

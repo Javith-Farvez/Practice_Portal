@@ -57,54 +57,53 @@ async function handleGitHubError(
 // ---------------------------------------------------------------------------
 // Helper: Check if GitHub OAuth is configured
 // ---------------------------------------------------------------------------
-const DEFAULT_PLACEHOLDER_KEY = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2';
-
 function isGitHubConfigured(): boolean {
-  const hasCredentials = !!(ENV.GITHUB.CLIENT_ID && ENV.GITHUB.CLIENT_SECRET &&
-    ENV.GITHUB.CLIENT_ID !== 'your_github_client_id_here' &&
-    ENV.GITHUB.CLIENT_SECRET !== 'your_github_client_secret_here');
-  const hasRealEncryptionKey = !!(ENV.GITHUB.ENCRYPTION_KEY &&
-    ENV.GITHUB.ENCRYPTION_KEY !== DEFAULT_PLACEHOLDER_KEY &&
-    ENV.GITHUB.ENCRYPTION_KEY.length >= 64);
-  return hasCredentials && hasRealEncryptionKey;
+  const clientId = ENV.GITHUB.CLIENT_ID?.trim();
+  const clientSecret = ENV.GITHUB.CLIENT_SECRET?.trim();
+  return !!(
+    clientId &&
+    clientSecret &&
+    !clientId.includes('your_github') &&
+    !clientSecret.includes('your_github') &&
+    clientId !== 'dummy_id' &&
+    clientSecret !== 'dummy_secret'
+  );
 }
 
 // ---------------------------------------------------------------------------
 // Helper: Resolve frontend base URL for OAuth redirects
 // ---------------------------------------------------------------------------
 function getFrontendUrl(): string {
-  if (ENV.CLIENT_URL && !ENV.CLIENT_URL.includes('localhost')) {
-    return ENV.CLIENT_URL;
+  const envUrl = process.env.FRONTEND_URL || ENV.CLIENT_URL;
+  if (envUrl && !envUrl.includes('localhost')) {
+    return envUrl.replace(/\/+$/, '');
   }
   if (ENV.NODE_ENV === 'production') {
     return 'https://practice-portal-mu.vercel.app';
   }
-  return ENV.CLIENT_URL || 'http://localhost:5173';
+  return envUrl || 'http://localhost:5173';
 }
 
 // ---------------------------------------------------------------------------
-// GET /api/github/health  (public — no auth required)
+// GET /api/github/health & /api/github/config-status  (public — no auth required)
 // Returns whether GitHub OAuth is fully configured on this server.
 // Safe to call without a JWT — never returns secrets.
 // ---------------------------------------------------------------------------
 export const getGitHubHealth = (_req: Request, res: Response): void => {
   const configured = isGitHubConfigured();
   const missing: string[] = [];
-  if (!ENV.GITHUB.CLIENT_ID || ENV.GITHUB.CLIENT_ID === 'your_github_client_id_here') {
+  if (!ENV.GITHUB.CLIENT_ID || ENV.GITHUB.CLIENT_ID.includes('your_github') || ENV.GITHUB.CLIENT_ID === 'dummy_id') {
     missing.push('GITHUB_CLIENT_ID');
   }
-  if (!ENV.GITHUB.CLIENT_SECRET || ENV.GITHUB.CLIENT_SECRET === 'your_github_client_secret_here') {
+  if (!ENV.GITHUB.CLIENT_SECRET || ENV.GITHUB.CLIENT_SECRET.includes('your_github') || ENV.GITHUB.CLIENT_SECRET === 'dummy_secret') {
     missing.push('GITHUB_CLIENT_SECRET');
-  }
-  if (!ENV.GITHUB.ENCRYPTION_KEY || ENV.GITHUB.ENCRYPTION_KEY === DEFAULT_PLACEHOLDER_KEY) {
-    missing.push('GITHUB_ENCRYPTION_KEY (must not be the default placeholder)');
   }
   res.json({
     success: true,
     data: {
       configured,
       missing_variables: configured ? [] : missing,
-      callback_url: ENV.GITHUB.CALLBACK_URL || null,
+      callback_url: ENV.GITHUB.CALLBACK_URL,
     },
   });
 };
@@ -116,18 +115,15 @@ export const getGitHubHealth = (_req: Request, res: Response): void => {
 export const initiateOAuth = async (req: Request, res: Response): Promise<void> => {
   if (!isGitHubConfigured()) {
     const missing: string[] = [];
-    if (!ENV.GITHUB.CLIENT_ID || ENV.GITHUB.CLIENT_ID === 'your_github_client_id_here') {
+    if (!ENV.GITHUB.CLIENT_ID || ENV.GITHUB.CLIENT_ID.includes('your_github') || ENV.GITHUB.CLIENT_ID === 'dummy_id') {
       missing.push('GITHUB_CLIENT_ID');
     }
-    if (!ENV.GITHUB.CLIENT_SECRET || ENV.GITHUB.CLIENT_SECRET === 'your_github_client_secret_here') {
+    if (!ENV.GITHUB.CLIENT_SECRET || ENV.GITHUB.CLIENT_SECRET.includes('your_github') || ENV.GITHUB.CLIENT_SECRET === 'dummy_secret') {
       missing.push('GITHUB_CLIENT_SECRET');
-    }
-    if (!ENV.GITHUB.ENCRYPTION_KEY || ENV.GITHUB.ENCRYPTION_KEY === DEFAULT_PLACEHOLDER_KEY) {
-      missing.push('GITHUB_ENCRYPTION_KEY');
     }
     res.status(503).json({
       success: false,
-      message: `GitHub OAuth is not configured. Missing or placeholder values for: ${missing.join(', ')}. Set these in your Render backend environment variables and redeploy.`,
+      message: `GitHub OAuth is not configured on this server yet. Missing environment variables: ${missing.join(', ')}. Please add them to your Render backend environment variables and redeploy.`,
       data: { missing_variables: missing },
     });
     return;
@@ -653,7 +649,7 @@ export const pushSolution = async (req: Request, res: Response): Promise<void> =
       {
         path: javaFilePath,
         content: javaContent,
-        message: `feat: Add Java solution for "${finalTitle}" [${finalDifficulty}]`,
+        message: `Solve Java Problem: ${finalTitle} [${finalDifficulty}]`,
       },
     ];
 
@@ -699,6 +695,25 @@ export const pushSolution = async (req: Request, res: Response): Promise<void> =
       pushResult.filePaths.push(readmePath);
     } catch {
       // README push failure is non-fatal
+    }
+
+    // Save commit URL into user's latest submission record if problem_id is provided
+    if (problem_id && pushResult.commitUrl) {
+      try {
+        await pool.query(
+          `UPDATE submissions
+           SET github_commit_url = $1
+           WHERE id = (
+             SELECT id FROM submissions
+             WHERE user_id = $2 AND problem_id = $3
+             ORDER BY created_at DESC
+             LIMIT 1
+           )`,
+          [pushResult.commitUrl, userId, problem_id]
+        );
+      } catch {
+        // Non-fatal if column or query fails
+      }
     }
 
     // Log the push

@@ -32,13 +32,15 @@ const githubRateLimiter = rateLimit({
 router.use(githubRateLimiter);
 
 // ---- Public: GitHub configuration health check (no auth required) ----
-// Useful for debugging deployment: GET /api/github/health
+// Useful for debugging deployment: GET /api/github/health or GET /api/github/config-status
 router.get('/health', getGitHubHealth);
+router.get('/config-status', getGitHubHealth);
 
 // ---- OAuth Flow ----
 // Initiates OAuth — requires user to be logged in (JWT auth)
 // JWT is passed as ?token= query param because browser redirects can't set custom headers.
 router.get('/auth', authenticateToken, initiateOAuth);
+router.get('/login', authenticateToken, initiateOAuth);
 
 // OAuth callback — GitHub redirects here after the user approves/denies access.
 // NOT protected by authenticateToken — browser arrives here from GitHub without our JWT.
@@ -50,6 +52,7 @@ router.get('/status', authenticateToken, getGitHubStatus);
 router.get('/repositories', authenticateToken, getRepositories);
 router.get('/repositories/:owner/:repo/branches', authenticateToken, getBranches);
 router.post('/select-repository', authenticateToken, selectRepository);
+router.post('/select-repo', authenticateToken, selectRepository);
 router.post('/push', authenticateToken, pushSolution);
 router.post('/auto-push', authenticateToken, toggleAutoPush);
 router.post('/disconnect', authenticateToken, disconnectGitHub);

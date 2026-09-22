@@ -26,18 +26,25 @@ export const ENV = {
     SECRET: process.env.JWT_SECRET || 'fallback_secret_for_development_mode_only',
     EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
   },
-  CLIENT_URL: process.env.CLIENT_URL || 'http://localhost:5173',
+  CLIENT_URL:
+    process.env.FRONTEND_URL ||
+    process.env.CLIENT_URL ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://practice-portal-mu.vercel.app'
+      : 'http://localhost:5173'),
   GITHUB: {
     APP_ID: process.env.GITHUB_APP_ID || '',
     CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
     CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || '',
     PRIVATE_KEY: process.env.GITHUB_PRIVATE_KEY || '',
     APP_NAME: process.env.GITHUB_APP_NAME || '',
-    CALLBACK_URL: process.env.GITHUB_CALLBACK_URL || 'http://localhost:5001/api/github/callback',
+    CALLBACK_URL:
+      process.env.GITHUB_CALLBACK_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://practice-portal-kmri.onrender.com/api/github/callback'
+        : 'http://localhost:5001/api/github/callback'),
     SCOPES: process.env.GITHUB_OAUTH_SCOPES || 'read:user,repo',
-    // AES-256-CBC key for token encryption (must be 32 bytes when decoded from hex)
-    // Generate with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-    ENCRYPTION_KEY: process.env.GITHUB_ENCRYPTION_KEY || 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+    ENCRYPTION_KEY: process.env.GITHUB_ENCRYPTION_KEY || '',
     WEBHOOK_SECRET: process.env.GITHUB_WEBHOOK_SECRET || '',
   },
 };
