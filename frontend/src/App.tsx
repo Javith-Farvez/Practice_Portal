@@ -50,6 +50,7 @@ export const App: React.FC = () => {
               <Route path="/java" element={<SubjectPage />} />
               <Route path="/dsa" element={<SubjectPage />} />
               <Route path="/aptitude" element={<SubjectPage />} />
+              <Route path="/subjects/:slug" element={<SubjectPage />} />
 
               {/* Topic & Problem Views */}
               <Route path="/topics/:id" element={<TopicDetailPage />} />

@@ -165,7 +165,7 @@ export const TopicDetailPage: React.FC = () => {
       <div className="flex items-center gap-2 text-xs font-bold text-[#6B706B] dark:text-stone-400">
         <Link to={`/${topic.subject_slug}`} className="hover:text-[#E76F51] flex items-center gap-1 transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Java</span>
+          <span>{topic.subject_slug ? (topic.subject_slug === 'dsa' ? 'DSA' : topic.subject_slug.charAt(0).toUpperCase() + topic.subject_slug.slice(1)) : 'Java'}</span>
         </Link>
         <span>&gt;</span>
         <span className="text-[#1F2421] dark:text-amber-200">{topic.name}</span>

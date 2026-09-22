@@ -58,6 +58,7 @@ router.get('/problems/:id', optionalAuth, getProblemById);
 // User Progress & Problem Tracking Routes (Protected)
 router.post('/problems/:id/toggle-solve', authenticateToken, toggleProblemSolve);
 router.post('/problems/:id/toggle-bookmark', authenticateToken, toggleProblemBookmark);
+router.post('/problems/:id/bookmark', authenticateToken, toggleProblemBookmark);
 router.get('/user/progress', authenticateToken, getUserDashboard); // Uses enhanced Phase 4 dashboard progress
 
 // Phase 3: Code Execution & Judge Submissions
