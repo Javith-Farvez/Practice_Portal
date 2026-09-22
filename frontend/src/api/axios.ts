@@ -53,9 +53,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // If token expired or unauthorized on protected routes, clear stale token
-      const isAuthEndpoint = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
-      if (!isAuthEndpoint) {
+      // Differentiate between Portal JWT expiration and GitHub OAuth sub-service token expiration
+      const isGitHubEndpoint = error.config?.url?.includes('/github');
+      const isReconnectRequired = error.response?.data?.reconnect_required;
+      const isAuthEndpoint =
+        error.config?.url?.includes('/auth/login') ||
+        error.config?.url?.includes('/auth/register');
+
+      // Only clear portal session and redirect to /login if the PORTAL's JWT expired
+      if (!isAuthEndpoint && !isGitHubEndpoint && !isReconnectRequired) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         if (window.location.pathname !== '/login') {

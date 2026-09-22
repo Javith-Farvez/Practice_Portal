@@ -15,7 +15,44 @@ import {
   generateReadmeContent,
   sanitizePathSegment,
   GitHubFile,
+  GitHubAuthError,
 } from '../services/github/github.service';
+
+// ---------------------------------------------------------------------------
+// Helper: Cleanly handle GitHub API errors, detecting 401 token expiry/revocation
+// ---------------------------------------------------------------------------
+async function handleGitHubError(
+  error: any,
+  userId: number,
+  res: Response,
+  fallbackMessage: string
+): Promise<void> {
+  const isAuthError =
+    error instanceof GitHubAuthError ||
+    error.name === 'GitHubAuthError' ||
+    (typeof error.message === 'string' &&
+      (error.message.includes('401') ||
+        error.message.toLowerCase().includes('bad credentials') ||
+        error.message.toLowerCase().includes('token expired')));
+
+  if (isAuthError) {
+    try {
+      await pool.query('DELETE FROM github_connections WHERE user_id = $1', [userId]);
+      await pool.query('DELETE FROM github_oauth_states WHERE user_id = $1', [userId]);
+    } catch (cleanErr: any) {
+      console.warn('[GitHub] Could not clear stale connection:', cleanErr.message);
+    }
+    res.status(401).json({
+      success: false,
+      reconnect_required: true,
+      message: 'Your GitHub authorization has expired or was revoked. Please reconnect your GitHub account.',
+      data: null,
+    });
+    return;
+  }
+
+  res.status(500).json({ success: false, message: fallbackMessage || error.message, data: null });
+}
 
 // ---------------------------------------------------------------------------
 // Helper: Check if GitHub OAuth is configured
@@ -222,12 +259,14 @@ export const handleCallback = async (req: Request, res: Response): Promise<void>
 // ---------------------------------------------------------------------------
 export const getGitHubStatus = async (req: Request, res: Response): Promise<void> => {
   const userId = req.user!.id;
+  const verify = req.query.verify === 'true';
 
   try {
     const result = await pool.query(
       `SELECT github_username, github_avatar_url, github_profile_url,
               selected_repo_full_name, selected_repo_owner, selected_repo_name,
-              selected_branch, is_private_repo, token_scope, auto_push_on_accept, connected_at
+              selected_branch, is_private_repo, token_scope, auto_push_on_accept, connected_at,
+              encrypted_access_token, encryption_iv
        FROM github_connections WHERE user_id = $1`,
       [userId]
     );
@@ -244,6 +283,33 @@ export const getGitHubStatus = async (req: Request, res: Response): Promise<void
     }
 
     const row = result.rows[0];
+
+    // If active verification is requested, check if token is still valid on GitHub
+    if (verify) {
+      try {
+        const accessToken = decryptToken(row.encrypted_access_token, row.encryption_iv);
+        await getGitHubUser(accessToken);
+      } catch (authErr: any) {
+        if (
+          authErr instanceof GitHubAuthError ||
+          authErr.name === 'GitHubAuthError' ||
+          (typeof authErr.message === 'string' &&
+            (authErr.message.includes('401') || authErr.message.toLowerCase().includes('bad credentials')))
+        ) {
+          await pool.query('DELETE FROM github_connections WHERE user_id = $1', [userId]);
+          res.json({
+            success: true,
+            data: {
+              connected: false,
+              reconnect_required: true,
+              configured: isGitHubConfigured(),
+            },
+          });
+          return;
+        }
+      }
+    }
+
     res.json({
       success: true,
       data: {
@@ -308,7 +374,7 @@ export const getRepositories = async (req: Request, res: Response): Promise<void
     });
   } catch (error: any) {
     console.error('[GitHub] getRepositories error:', error.message);
-    res.status(500).json({ success: false, message: 'Failed to fetch repositories.', data: null });
+    await handleGitHubError(error, userId, res, 'Failed to fetch repositories.');
   }
 };
 
@@ -352,7 +418,7 @@ export const getBranches = async (req: Request, res: Response): Promise<void> =>
     });
   } catch (error: any) {
     console.error('[GitHub] getBranches error:', error.message);
-    res.status(500).json({ success: false, message: 'Failed to fetch branches.', data: null });
+    await handleGitHubError(error, userId, res, 'Failed to fetch branches.');
   }
 };
 
@@ -435,7 +501,7 @@ export const selectRepository = async (req: Request, res: Response): Promise<voi
     });
   } catch (error: any) {
     console.error('[GitHub] selectRepository error:', error.message);
-    res.status(500).json({ success: false, message: 'Failed to select repository.', data: null });
+    await handleGitHubError(error, userId, res, 'Failed to select repository.');
   }
 };
 
@@ -691,7 +757,7 @@ export const pushSolution = async (req: Request, res: Response): Promise<void> =
       }
     } catch { /* ignore */ }
 
-    res.status(500).json({ success: false, message: `Failed to push to GitHub: ${error.message}`, data: null });
+    await handleGitHubError(error, userId, res, `Failed to push to GitHub: ${error.message}`);
   }
 };
 

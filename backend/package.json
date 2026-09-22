@@ -22,7 +22,8 @@
     "test:phase5": "tsx src/scripts/test-phase5.ts",
     "test:phase6": "tsx src/scripts/test-phase6.ts",
     "test:phase7": "tsx src/scripts/test-phase7.ts",
-    "test:phase8": "tsx src/scripts/test-phase8.ts"
+    "test:phase8": "tsx src/scripts/test-phase8.ts",
+    "test:multiuser": "tsx src/scripts/test-multiuser-github.ts"
   },
   "keywords": ["placement-portal", "authentication", "express", "jwt", "postgresql", "pg"],
   "author": "",

@@ -205,10 +205,18 @@ export const GitHubConnect: React.FC = () => {
         fetchBranches(selectedRepoFullName);
       }
     } catch (err: any) {
-      setMessage({
-        type: 'error',
-        text: err.response?.data?.message || 'Failed to load GitHub repositories. Your authorization may have expired — try disconnecting and reconnecting.',
-      });
+      if (err.response?.status === 401 || err.response?.data?.reconnect_required) {
+        setStatus((prev) => (prev ? { ...prev, connected: false } : null));
+        setMessage({
+          type: 'error',
+          text: '⚠️ Your GitHub authorization has expired or was revoked. Please click "Connect GitHub" below to reconnect your account.',
+        });
+      } else {
+        setMessage({
+          type: 'error',
+          text: err.response?.data?.message || 'Failed to load GitHub repositories. Your authorization may have expired — try disconnecting and reconnecting.',
+        });
+      }
     } finally {
       setReposLoading(false);
     }
@@ -251,14 +259,22 @@ export const GitHubConnect: React.FC = () => {
       });
       await fetchStatus();
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Failed to save repository selection.';
-      if (msg.toLowerCase().includes('push access')) {
+      if (err.response?.status === 401 || err.response?.data?.reconnect_required) {
+        setStatus((prev) => (prev ? { ...prev, connected: false } : null));
         setMessage({
           type: 'error',
-          text: `No push access to "${selectedRepoFullName}". Select a repository you own or have write permissions to.`,
+          text: '⚠️ Your GitHub authorization has expired or was revoked. Please click "Connect GitHub" below to reconnect your account.',
         });
       } else {
-        setMessage({ type: 'error', text: msg });
+        const msg = err.response?.data?.message || 'Failed to save repository selection.';
+        if (msg.toLowerCase().includes('push access')) {
+          setMessage({
+            type: 'error',
+            text: `No push access to "${selectedRepoFullName}". Select a repository you own or have write permissions to.`,
+          });
+        } else {
+          setMessage({ type: 'error', text: msg });
+        }
       }
     } finally {
       setSavingRepo(false);

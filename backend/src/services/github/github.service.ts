@@ -4,6 +4,16 @@ import http from 'http';
 import { ENV } from '../../config/env';
 
 // ---------------------------------------------------------------------------
+// Error Types
+// ---------------------------------------------------------------------------
+export class GitHubAuthError extends Error {
+  constructor(message: string = 'GitHub access token has expired or was revoked.') {
+    super(message);
+    this.name = 'GitHubAuthError';
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Encryption Helpers (AES-256-CBC)
 // ---------------------------------------------------------------------------
 function getEncryptionKey(): Buffer {
@@ -122,6 +132,9 @@ export async function getGitHubUser(accessToken: string): Promise<{
     },
   });
 
+  if (result.status === 401) {
+    throw new GitHubAuthError('GitHub access token has expired or was revoked.');
+  }
   if (result.status !== 200) {
     throw new Error(`Failed to fetch GitHub user: HTTP ${result.status}`);
   }
@@ -162,6 +175,9 @@ export async function getUserRepositories(
     },
   });
 
+  if (result.status === 401) {
+    throw new GitHubAuthError('GitHub access token has expired or was revoked.');
+  }
   if (result.status !== 200) {
     throw new Error(`Failed to fetch repositories: HTTP ${result.status}`);
   }
@@ -189,6 +205,9 @@ export async function verifyRepoPushAccess(
     },
   });
 
+  if (result.status === 401) {
+    throw new GitHubAuthError('GitHub access token has expired or was revoked.');
+  }
   if (result.status === 404) return false;
   if (result.status !== 200) return false;
   return result.data?.permissions?.push === true;
@@ -279,6 +298,10 @@ export async function pushFilesToGitHub(
       bodyStr
     );
 
+    if (result.status === 401) {
+      throw new GitHubAuthError('GitHub access token has expired or was revoked.');
+    }
+
     if (result.status !== 200 && result.status !== 201) {
       throw new Error(
         `Failed to push file "${file.path}": HTTP ${result.status} — ${
@@ -358,6 +381,9 @@ export async function getRepositoryBranches(
     },
   });
 
+  if (result.status === 401) {
+    throw new GitHubAuthError('GitHub access token has expired or was revoked.');
+  }
   if (result.status !== 200) {
     throw new Error(`Failed to fetch branches: HTTP ${result.status}`);
   }

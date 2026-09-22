@@ -65,11 +65,11 @@ export class ProgressService {
         );
       }
 
-      // 3. Update daily_activity for today (PostgreSQL ON CONFLICT)
+      // 3. Update daily_activity for today using PostgreSQL CURRENT_DATE
       await pool.query(
         `INSERT INTO daily_activity (
           user_id, activity_date, total_submissions, accepted_submissions, problems_solved, problems_attempted
-        ) VALUES ($1, $2, 1, $3, $4, $5)
+        ) VALUES ($1, CURRENT_DATE, 1, $2, $3, $4)
         ON CONFLICT (user_id, activity_date) DO UPDATE SET 
           total_submissions = daily_activity.total_submissions + 1,
           accepted_submissions = daily_activity.accepted_submissions + EXCLUDED.accepted_submissions,
@@ -77,7 +77,6 @@ export class ProgressService {
           problems_attempted = daily_activity.problems_attempted + EXCLUDED.problems_attempted`,
         [
           userId,
-          todayStr,
           isAccepted ? 1 : 0,
           isNewlySolved ? 1 : 0,
           isNewlyAttempted ? 1 : 0,
@@ -102,9 +101,46 @@ export class ProgressService {
    * Recalculates user_progress aggregate row and historical streaks.
    */
   public static async recalculateUserProgress(userId: number): Promise<void> {
+    try {
+      // 0. Ensure daily_activity and user_problem_progress are completely synchronized from PostgreSQL submissions
+      await pool.query(
+        `INSERT INTO daily_activity (user_id, activity_date, total_submissions, accepted_submissions, problems_solved, problems_attempted)
+         SELECT 
+           user_id,
+           created_at::date as activity_date,
+           COUNT(*) as total_submissions,
+           COUNT(CASE WHEN status = 'ACCEPTED' THEN 1 END) as accepted_submissions,
+           COUNT(DISTINCT CASE WHEN status = 'ACCEPTED' THEN problem_id END) as problems_solved,
+           COUNT(DISTINCT problem_id) as problems_attempted
+         FROM submissions
+         WHERE user_id = $1
+         GROUP BY user_id, created_at::date
+         ON CONFLICT (user_id, activity_date) DO UPDATE SET
+           total_submissions = GREATEST(daily_activity.total_submissions, EXCLUDED.total_submissions),
+           accepted_submissions = GREATEST(daily_activity.accepted_submissions, EXCLUDED.accepted_submissions),
+           problems_solved = GREATEST(daily_activity.problems_solved, EXCLUDED.problems_solved),
+           problems_attempted = GREATEST(daily_activity.problems_attempted, EXCLUDED.problems_attempted)`,
+        [userId]
+      );
+
+      await pool.query(
+        `INSERT INTO user_problem_progress (user_id, problem_id, status, solved_at)
+         SELECT DISTINCT user_id, problem_id, 'SOLVED', MIN(created_at)
+         FROM submissions
+         WHERE user_id = $1 AND status = 'ACCEPTED'
+         GROUP BY user_id, problem_id
+         ON CONFLICT (user_id, problem_id) DO UPDATE SET
+           status = 'SOLVED',
+           solved_at = COALESCE(user_problem_progress.solved_at, EXCLUDED.solved_at)`,
+        [userId]
+      );
+    } catch (syncErr) {
+      console.warn('[Progress Service] Sync from submissions warning:', (syncErr as any).message);
+    }
+
     // 1. Calculate active dates where user solved >= 1 problem (or has accepted submission)
     const dateRes = await pool.query(
-      `SELECT DISTINCT activity_date 
+      `SELECT DISTINCT activity_date::text as activity_date 
        FROM daily_activity 
        WHERE user_id = $1 AND (problems_solved > 0 OR accepted_submissions > 0)
        ORDER BY activity_date DESC`,
@@ -113,7 +149,7 @@ export class ProgressService {
 
     const dateRows = dateRes.rows;
     const activeDates = dateRows.map(
-      (r: any) => new Date(r.activity_date).toISOString().split('T')[0]
+      (r: any) => String(r.activity_date).split('T')[0]
     );
 
     let currentStreak = 0;
@@ -121,29 +157,24 @@ export class ProgressService {
     const totalActiveDays = activeDates.length;
 
     if (activeDates.length > 0) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const yesterday = new Date(today);
-      yesterday.setDate(yesterday.getDate() - 1);
+      const datesSql = await pool.query("SELECT CURRENT_DATE::text as today, (CURRENT_DATE - INTERVAL '1 day')::date::text as yesterday");
+      const todayStr = datesSql.rows[0]?.today;
+      const yesterdayStr = datesSql.rows[0]?.yesterday;
 
-      const latestDate = new Date(activeDates[0]);
-      latestDate.setHours(0, 0, 0, 0);
+      const latestDateStr = activeDates[0];
 
       // Streak counts if practiced today or yesterday
-      if (
-        latestDate.getTime() === today.getTime() ||
-        latestDate.getTime() === yesterday.getTime()
-      ) {
+      if (latestDateStr === todayStr || latestDateStr === yesterdayStr) {
         currentStreak = 1;
-        let expectedDate = new Date(latestDate);
+        let prevDate = new Date(latestDateStr);
 
         for (let i = 1; i < activeDates.length; i++) {
-          expectedDate.setDate(expectedDate.getDate() - 1);
-          const nextDate = new Date(activeDates[i]);
-          nextDate.setHours(0, 0, 0, 0);
-
-          if (nextDate.getTime() === expectedDate.getTime()) {
+          const expected = new Date(prevDate);
+          expected.setDate(expected.getDate() - 1);
+          const expStr = expected.toISOString().split('T')[0];
+          if (activeDates[i] === expStr) {
             currentStreak++;
+            prevDate = expected;
           } else {
             break;
           }
@@ -318,11 +349,11 @@ export class ProgressService {
       const startDateStr = oneYearAgo.toISOString().split('T')[0];
 
       const result = await pool.query(
-        `SELECT activity_date, problems_solved, total_submissions
+        `SELECT activity_date::text as activity_date, problems_solved, total_submissions
          FROM daily_activity
-         WHERE user_id = $1 AND activity_date >= $2
+         WHERE user_id = $1 AND activity_date >= CURRENT_DATE - INTERVAL '365 days'
          ORDER BY activity_date ASC`,
-        [userId, startDateStr]
+        [userId]
       );
 
       if (result.rows && result.rows.length > 0) {
@@ -331,7 +362,7 @@ export class ProgressService {
         let totalSubmissionsYear = 0;
 
         result.rows.forEach((r: any) => {
-          const dateKey = new Date(r.activity_date).toISOString().split('T')[0];
+          const dateKey = String(r.activity_date).split('T')[0];
           const solved = Number(r.problems_solved) || 0;
           const subs = Number(r.total_submissions) || 0;
 
@@ -373,6 +404,11 @@ export class ProgressService {
    */
   public static async getUserAnalytics(userId: number) {
     try {
+      // Ensure user progress and streaks are always fresh and synchronized
+      try {
+        await this.recalculateUserProgress(userId);
+      } catch {}
+
       // 1. Difficulty Distribution
       const diffRes = await pool.query(
       `SELECT 
@@ -424,7 +460,7 @@ export class ProgressService {
 
     // 3. Activity trends: last 30 days
     const dailyRes = await pool.query(
-      `SELECT activity_date, problems_solved, total_submissions
+      `SELECT activity_date::text as activity_date, problems_solved, total_submissions
        FROM daily_activity
        WHERE user_id = $1 AND activity_date >= CURRENT_DATE - INTERVAL '30 days'
        ORDER BY activity_date ASC`,
@@ -432,18 +468,18 @@ export class ProgressService {
     );
 
     const problemsSolvedPerDay = dailyRes.rows.map((r: any) => ({
-      date: new Date(r.activity_date).toISOString().split('T')[0],
+      date: String(r.activity_date).split('T')[0],
       solved: Number(r.problems_solved) || 0,
       submissions: Number(r.total_submissions) || 0,
     }));
 
-    // 4. Weekly Activity (last 7 days)
+    // 4. Weekly Activity (last 7 days inclusive)
     const weeklyRes = await pool.query(
       `SELECT 
         COALESCE(SUM(problems_solved), 0) as solved,
         COALESCE(SUM(total_submissions), 0) as submissions
        FROM daily_activity
-       WHERE user_id = $1 AND activity_date >= CURRENT_DATE - INTERVAL '7 days'`,
+       WHERE user_id = $1 AND activity_date >= CURRENT_DATE - INTERVAL '6 days'`,
       [userId]
     );
     const weeklyActivity = {
@@ -458,8 +494,7 @@ export class ProgressService {
         COALESCE(SUM(total_submissions), 0) as submissions
        FROM daily_activity
        WHERE user_id = $1 
-         AND EXTRACT(YEAR FROM activity_date) = EXTRACT(YEAR FROM CURRENT_DATE)
-         AND EXTRACT(MONTH FROM activity_date) = EXTRACT(MONTH FROM CURRENT_DATE)`,
+         AND activity_date >= DATE_TRUNC('month', CURRENT_DATE)`,
       [userId]
     );
     const monthlyActivity = {
@@ -613,36 +648,47 @@ export class ProgressService {
       }
     });
 
-    // 9. Last 7 Days (Weekly Chart Data)
-    const daysArr = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
-      d.setDate(d.getDate() - i);
-      const dStr = d.toISOString().split('T')[0];
-      const match = problemsSolvedPerDay.find((p) => p.date === dStr);
-      daysArr.push({
-        date: dStr,
-        day_name: d.toLocaleDateString('en-US', { weekday: 'short' }),
-        solved: match ? match.solved : 0,
-        submissions: match ? match.submissions : 0,
-      });
-    }
-
-    // 10. Last 6 Months (Monthly Chart Data using PostgreSQL TO_CHAR)
-    const monthRes = await pool.query(
+    // 9. Last 7 Days (Weekly Chart Data generated in SQL with exact dates)
+    const weeklyChartRes = await pool.query(
       `SELECT 
-        TO_CHAR(activity_date, 'YYYY-MM') as ym,
-        TO_CHAR(activity_date, 'Mon') as month_name,
-        COALESCE(SUM(problems_solved), 0) as solved,
-        COALESCE(SUM(total_submissions), 0) as submissions
-       FROM daily_activity
-       WHERE user_id = $1 AND activity_date >= CURRENT_DATE - INTERVAL '6 months'
-       GROUP BY TO_CHAR(activity_date, 'YYYY-MM'), TO_CHAR(activity_date, 'Mon')
-       ORDER BY ym ASC`,
+        d::date::text as date,
+        TO_CHAR(d, 'Dy') as day_name,
+        COALESCE(da.problems_solved, 0) as solved,
+        COALESCE(da.total_submissions, 0) as submissions
+       FROM generate_series(CURRENT_DATE - INTERVAL '6 days', CURRENT_DATE, INTERVAL '1 day') d
+       LEFT JOIN daily_activity da ON da.activity_date = d::date AND da.user_id = $1
+       ORDER BY d ASC`,
       [userId]
     );
 
-    const monthlyChart = monthRes.rows.map((r: any) => ({
+    const daysArr = weeklyChartRes.rows.map((r: any) => ({
+      date: r.date,
+      day_name: r.day_name,
+      solved: Number(r.solved) || 0,
+      submissions: Number(r.submissions) || 0,
+    }));
+
+    // 10. Last 6 Months (Monthly Chart Data generated in SQL)
+    const monthlyChartRes = await pool.query(
+      `SELECT 
+        TO_CHAR(d, 'YYYY-MM') as ym,
+        TO_CHAR(d, 'Mon') as month_name,
+        COALESCE(SUM(da.problems_solved), 0) as solved,
+        COALESCE(SUM(da.total_submissions), 0) as submissions
+       FROM generate_series(
+         DATE_TRUNC('month', CURRENT_DATE - INTERVAL '5 months'),
+         DATE_TRUNC('month', CURRENT_DATE),
+         INTERVAL '1 month'
+       ) d
+       LEFT JOIN daily_activity da 
+         ON DATE_TRUNC('month', da.activity_date) = d 
+         AND da.user_id = $1
+       GROUP BY d, TO_CHAR(d, 'YYYY-MM'), TO_CHAR(d, 'Mon')
+       ORDER BY d ASC`,
+      [userId]
+    );
+
+    const monthlyChart = monthlyChartRes.rows.map((r: any) => ({
       year_month: r.ym,
       month: r.month_name,
       solved: Number(r.solved) || 0,

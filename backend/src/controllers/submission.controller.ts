@@ -96,6 +96,10 @@ export const submitProblemCode = async (req: Request, res: Response, next: NextF
     const normalizedLang = 'JAVA' as Language;
     const result = await JudgeService.submitSolution(userId, problemId, normalizedLang, source_code);
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Submit] User ID ${userId} submitted solution for Problem #${problemId}. Verdict: ${result.status}`);
+    }
+
     res.status(200).json({
       success: true,
       message:
@@ -153,11 +157,11 @@ export const getUserSubmissions = async (req: Request, res: Response, next: Next
 
     const whereSql = `WHERE ${whereClauses.join(' AND ')}`;
 
-    // Total count query
+    // Total count query with LEFT JOIN to never drop records
     const countResult = await pool.query(
       `SELECT COUNT(s.id) as total 
        FROM submissions s 
-       JOIN problems p ON s.problem_id = p.id
+       LEFT JOIN problems p ON s.problem_id = p.id
        ${whereSql}`,
       queryParams
     );
@@ -175,10 +179,10 @@ export const getUserSubmissions = async (req: Request, res: Response, next: Next
         s.id,
         s.user_id,
         s.problem_id,
-        p.title as problem_title,
-        p.slug as problem_slug,
-        t.id as topic_id,
-        t.name as topic_name,
+        COALESCE(p.title, 'Problem #' || s.problem_id) as problem_title,
+        COALESCE(p.slug, 'problem-' || s.problem_id) as problem_slug,
+        COALESCE(t.id, 0) as topic_id,
+        COALESCE(t.name, 'General') as topic_name,
         s.language,
         s.status,
         s.passed_tests,
@@ -187,14 +191,18 @@ export const getUserSubmissions = async (req: Request, res: Response, next: Next
         s.memory_kb,
         s.created_at
       FROM submissions s
-      JOIN problems p ON s.problem_id = p.id
-      JOIN topics t ON p.topic_id = t.id
+      LEFT JOIN problems p ON s.problem_id = p.id
+      LEFT JOIN topics t ON p.topic_id = t.id
       ${whereSql}
       ORDER BY s.created_at DESC
       LIMIT ${limitPlaceholder} OFFSET ${offsetPlaceholder}
     `;
 
     const result = await pool.query(query, dataParams);
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[Submissions API] User ID ${userId} fetched submissions. Returned: ${result.rows.length} of ${total}`);
+    }
 
     res.status(200).json({
       success: true,
@@ -240,10 +248,10 @@ export const getSubmissionById = async (req: Request, res: Response, next: NextF
         s.id,
         s.user_id,
         s.problem_id,
-        p.title as problem_title,
-        p.slug as problem_slug,
-        t.id as topic_id,
-        t.name as topic_name,
+        COALESCE(p.title, 'Problem #' || s.problem_id) as problem_title,
+        COALESCE(p.slug, 'problem-' || s.problem_id) as problem_slug,
+        COALESCE(t.id, 0) as topic_id,
+        COALESCE(t.name, 'General') as topic_name,
         s.language,
         s.source_code,
         s.status,
@@ -253,8 +261,8 @@ export const getSubmissionById = async (req: Request, res: Response, next: NextF
         s.memory_kb,
         s.created_at
        FROM submissions s
-       JOIN problems p ON s.problem_id = p.id
-       JOIN topics t ON p.topic_id = t.id
+       LEFT JOIN problems p ON s.problem_id = p.id
+       LEFT JOIN topics t ON p.topic_id = t.id
        WHERE s.id = $1 AND (s.user_id = $2 OR $3 = 'ADMIN')
        LIMIT 1`,
       [submissionId, userId, req.user.role]

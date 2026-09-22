@@ -98,7 +98,12 @@ export const GitHubPushButton: React.FC<GitHubPushButtonProps> = ({
         file_paths: res.file_paths,
       });
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to push solution to GitHub.');
+      if (err.response?.status === 401 || err.response?.data?.reconnect_required) {
+        setStatus((prev) => (prev ? { ...prev, connected: false } : null));
+        setError('⚠️ Your GitHub authorization has expired or was revoked. Please reconnect your GitHub account in Settings.');
+      } else {
+        setError(err.response?.data?.message || 'Failed to push solution to GitHub.');
+      }
     } finally {
       setPushing(false);
     }
