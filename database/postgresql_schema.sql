@@ -121,6 +121,8 @@ CREATE TABLE IF NOT EXISTS problems (
     input_format TEXT,
     output_format TEXT,
     constraints TEXT,
+    sample_input TEXT,
+    sample_output TEXT,
     explanation TEXT,
     starter_code TEXT,
     reference_solution TEXT,

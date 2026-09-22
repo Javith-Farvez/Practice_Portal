@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import {
   BarChart3,
@@ -107,6 +108,7 @@ interface AnalyticsData {
 }
 
 export const AnalyticsPage: React.FC = () => {
+  const { user } = useAuth();
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +128,7 @@ export const AnalyticsPage: React.FC = () => {
       }
     };
     fetchAnalytics();
-  }, []);
+  }, [user?.id]);
 
   if (loading) {
     return (

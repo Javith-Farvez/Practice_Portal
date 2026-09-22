@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import {
   Send,
@@ -52,6 +53,7 @@ interface TopicOption {
 }
 
 export const SubmissionHistoryPage: React.FC = () => {
+  const { user } = useAuth();
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
   const [topics, setTopics] = useState<TopicOption[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -112,7 +114,7 @@ export const SubmissionHistoryPage: React.FC = () => {
 
   useEffect(() => {
     fetchSubmissions();
-  }, [page, filterStatus, filterTopic]);
+  }, [page, filterStatus, filterTopic, user?.id]);
 
   // Open detail modal and load complete submission
   const handleOpenDetail = async (id: number) => {

@@ -732,6 +732,8 @@ class FallbackStore {
       problems_solved: solvedCount,
       problems_attempted: attemptedCount,
       total_problems: totalProblems,
+      remaining_problems: Math.max(0, totalProblems - solvedCount),
+      today_solved: 0,
       overall_progress_percentage: overallProgress,
       accepted_submissions: acceptedSubs,
       total_submissions: totalSubs,

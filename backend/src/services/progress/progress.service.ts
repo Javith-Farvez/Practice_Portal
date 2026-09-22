@@ -140,9 +140,15 @@ export class ProgressService {
 
     // 1. Calculate active dates where user solved >= 1 problem (or has accepted submission)
     const dateRes = await pool.query(
-      `SELECT DISTINCT activity_date::text as activity_date 
-       FROM daily_activity 
-       WHERE user_id = $1 AND (problems_solved > 0 OR accepted_submissions > 0)
+      `SELECT DISTINCT activity_date FROM (
+         SELECT activity_date::text as activity_date 
+         FROM daily_activity 
+         WHERE user_id = $1 AND (problems_solved > 0 OR accepted_submissions > 0)
+         UNION
+         SELECT created_at::date::text as activity_date
+         FROM submissions
+         WHERE user_id = $1 AND status = 'ACCEPTED'
+       ) d
        ORDER BY activity_date DESC`,
       [userId]
     );
@@ -156,6 +162,21 @@ export class ProgressService {
     let longestStreak = 0;
     const totalActiveDays = activeDates.length;
 
+    // Timezone-safe date helpers (using UTC calendar math to avoid any local hour/DST shifting)
+    const getPrevDayStr = (dStr: string): string => {
+      const [y, m, d] = dStr.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d - 1));
+      return dt.toISOString().split('T')[0];
+    };
+
+    const getDayDiff = (dStr1: string, dStr2: string): number => {
+      const [y1, m1, d1] = dStr1.split('-').map(Number);
+      const [y2, m2, d2] = dStr2.split('-').map(Number);
+      const utc1 = Date.UTC(y1, m1 - 1, d1);
+      const utc2 = Date.UTC(y2, m2 - 1, d2);
+      return Math.round((utc1 - utc2) / (1000 * 60 * 60 * 24));
+    };
+
     if (activeDates.length > 0) {
       const datesSql = await pool.query("SELECT CURRENT_DATE::text as today, (CURRENT_DATE - INTERVAL '1 day')::date::text as yesterday");
       const todayStr = datesSql.rows[0]?.today;
@@ -166,15 +187,12 @@ export class ProgressService {
       // Streak counts if practiced today or yesterday
       if (latestDateStr === todayStr || latestDateStr === yesterdayStr) {
         currentStreak = 1;
-        let prevDate = new Date(latestDateStr);
+        let expectedDateStr = getPrevDayStr(latestDateStr);
 
         for (let i = 1; i < activeDates.length; i++) {
-          const expected = new Date(prevDate);
-          expected.setDate(expected.getDate() - 1);
-          const expStr = expected.toISOString().split('T')[0];
-          if (activeDates[i] === expStr) {
+          if (activeDates[i] === expectedDateStr) {
             currentStreak++;
-            prevDate = expected;
+            expectedDateStr = getPrevDayStr(expectedDateStr);
           } else {
             break;
           }
@@ -185,13 +203,8 @@ export class ProgressService {
       let tempStreak = 1;
       longestStreak = 1;
       for (let i = 1; i < activeDates.length; i++) {
-        const prev = new Date(activeDates[i - 1]);
-        prev.setHours(0, 0, 0, 0);
-        const curr = new Date(activeDates[i]);
-        curr.setHours(0, 0, 0, 0);
-
-        const diffDays = Math.round((prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays === 1) {
+        const diff = getDayDiff(activeDates[i - 1], activeDates[i]);
+        if (diff === 1) {
           tempStreak++;
           if (tempStreak > longestStreak) longestStreak = tempStreak;
         } else {
@@ -231,7 +244,7 @@ export class ProgressService {
 
     const lastActivityDate = activeDates.length > 0 ? activeDates[0] : null;
 
-    // 3. Upsert user_progress (PostgreSQL ON CONFLICT)
+    // 3. Upsert user_progress (PostgreSQL ON CONFLICT with GREATEST for longest_streak)
     await pool.query(
       `INSERT INTO user_progress (
         user_id, problems_attempted, problems_solved, accepted_submissions,
@@ -245,7 +258,7 @@ export class ProgressService {
         total_submissions = EXCLUDED.total_submissions,
         accuracy = EXCLUDED.accuracy,
         current_streak = EXCLUDED.current_streak,
-        longest_streak = EXCLUDED.longest_streak,
+        longest_streak = GREATEST(COALESCE(user_progress.longest_streak, 0), EXCLUDED.longest_streak),
         total_active_days = EXCLUDED.total_active_days,
         last_activity_date = EXCLUDED.last_activity_date,
         updated_at = CURRENT_TIMESTAMP`,
@@ -316,10 +329,21 @@ export class ProgressService {
           };
         });
 
+        const remainingProblems = Math.max(0, totalProblems - solvedProblems);
+
+        // Fetch today's solved count from daily_activity for today
+        const todayRes = await pool.query(
+          'SELECT problems_solved FROM daily_activity WHERE user_id = $1 AND activity_date = CURRENT_DATE LIMIT 1',
+          [userId]
+        );
+        const todaySolved = Number(todayRes.rows[0]?.problems_solved) || 0;
+
         return {
           problems_solved: solvedProblems,
           problems_attempted: Number(progress.problems_attempted) || 0,
           total_problems: totalProblems,
+          remaining_problems: remainingProblems,
+          today_solved: todaySolved,
           overall_progress_percentage: overallPercentage,
           accepted_submissions: Number(progress.accepted_submissions) || 0,
           total_submissions: Number(progress.total_submissions) || 0,

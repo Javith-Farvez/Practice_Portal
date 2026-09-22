@@ -100,13 +100,13 @@ export const initDatabase = async (): Promise<void> => {
     try {
       const probCountRes = await pool.query('SELECT COUNT(*) as count FROM problems');
       const probCount = parseInt(probCountRes.rows[0]?.count || '0', 10);
-      if (probCount < 250) {
-        console.log(`[Database] Found ${probCount} problems (expected 259). Auto-seeding catalog...`);
+      if (probCount === 0) {
+        console.log(`[Database] Found 0 problems. Auto-seeding initial catalog...`);
         const { fastBulkSeed } = await import('../scripts/seed-all-problems');
         await fastBulkSeed(false);
         console.log('[Database] Auto-seeding completed successfully.');
       } else {
-        console.log(`[Database] Catalog verified: ${probCount} problems present.`);
+        console.log(`[Database] Catalog verified: ${probCount} problems present. No reseeding required.`);
       }
     } catch (seedErr) {
       console.warn('[Database] Could not verify/auto-seed problems:', (seedErr as any).message);

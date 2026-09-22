@@ -124,7 +124,7 @@ export const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     fetchAllDashboardData();
-  }, []);
+  }, [user?.id]);
 
   const getSubjectPercentage = (slug: string): number => {
     if (!dashboard?.subjects) return 0;

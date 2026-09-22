@@ -142,9 +142,12 @@ export async function fastBulkSeed(closePool: boolean = false) {
     console.log(`  Inserted problems batch ${i + 1} to ${Math.min(i + CHUNK_SIZE, problems.length)}...`);
   }
 
-  // 5. Bulk insert test cases
-  console.log('🧪 Bulk inserting test cases...');
-  await pool.query('DELETE FROM test_cases;');
+  // 5. Bulk insert test cases (only if test cases table is empty)
+  console.log('🧪 Checking test cases...');
+  const tcCheck = await pool.query('SELECT COUNT(*) as count FROM test_cases');
+  const tcExistingCount = parseInt(tcCheck.rows[0]?.count || '0', 10);
+  if (tcExistingCount === 0) {
+    console.log('🧪 Inserting initial test cases...');
 
   const allTestCases: Array<{
     problem_id: number;
@@ -197,6 +200,9 @@ export async function fastBulkSeed(closePool: boolean = false) {
     `,
       params
     );
+  }
+  } else {
+    console.log(`🧪 Test cases already present (${tcExistingCount}), preserving existing test cases.`);
   }
 
   // Update sequences
