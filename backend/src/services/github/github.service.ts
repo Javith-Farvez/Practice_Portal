@@ -333,7 +333,40 @@ export async function revokeToken(accessToken: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Path Sanitization Helper
+// GitHub API — List repository branches
+// ---------------------------------------------------------------------------
+export interface GitHubBranch {
+  name: string;
+  commit: { sha: string; url: string };
+  protected: boolean;
+}
+
+export async function getRepositoryBranches(
+  accessToken: string,
+  owner: string,
+  repo: string
+): Promise<GitHubBranch[]> {
+  const result = await httpRequest({
+    hostname: 'api.github.com',
+    path: `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/branches?per_page=100`,
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Accept': 'application/vnd.github+json',
+      'User-Agent': 'PlacementPortal/1.0',
+      'X-GitHub-Api-Version': '2022-11-28',
+    },
+  });
+
+  if (result.status !== 200) {
+    throw new Error(`Failed to fetch branches: HTTP ${result.status}`);
+  }
+
+  return Array.isArray(result.data) ? result.data : [];
+}
+
+// ---------------------------------------------------------------------------
+// Path Sanitization & Validation Helpers
 // ---------------------------------------------------------------------------
 export function sanitizePathSegment(name: string, fallback: string = 'General'): string {
   const cleaned = (name || '')
@@ -342,6 +375,17 @@ export function sanitizePathSegment(name: string, fallback: string = 'General'):
     .replace(/\s+/g, '_')
     .substring(0, 80);
   return cleaned || fallback;
+}
+
+export function isValidGitHubFilePath(filePath: string): boolean {
+  if (!filePath || typeof filePath !== 'string') return false;
+  if (filePath.includes('\0') || filePath.includes('\\')) return false;
+  if (filePath.startsWith('/') || filePath.startsWith('.')) return false;
+  const segments = filePath.split('/');
+  if (segments.some((s) => s === '..' || s === '.' || s.trim() === '')) return false;
+  if (filePath.length > 250) return false;
+  if (!/\.(java|txt|md|cpp|py)$/i.test(filePath)) return false;
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -353,6 +397,12 @@ export function generateJavaSolutionContent(params: {
   problemDescription: string;
   difficulty: string;
   topicName: string;
+  inputFormat?: string;
+  outputFormat?: string;
+  constraints?: string;
+  sampleInput?: string;
+  sampleOutput?: string;
+  explanation?: string;
   code: string;
   username: string;
   pushedAt: string;
@@ -364,13 +414,20 @@ export function generateJavaSolutionContent(params: {
     problemDescription,
     difficulty,
     topicName,
+    inputFormat,
+    outputFormat,
+    constraints,
+    sampleInput,
+    sampleOutput,
+    explanation,
     code,
     username,
     pushedAt,
     status = 'Solved / Accepted',
   } = params;
 
-  return `/**
+  let doc = `/**
+ * ============================================================================
  * Problem: ${problemTitle}
  * Problem ID: ${problemId || 'N/A'}
  * Topic: ${topicName}
@@ -378,13 +435,59 @@ export function generateJavaSolutionContent(params: {
  * Status: ${status}
  * Author: ${username}
  * Pushed at: ${pushedAt}
+ * ============================================================================
  *
  * Description:
  * ${(problemDescription || '').replace(/\n/g, '\n * ')}
- */
+`;
+
+  if (inputFormat && inputFormat.trim()) {
+    doc += ` *
+ * Input Format:
+ * ${inputFormat.trim().replace(/\n/g, '\n * ')}
+`;
+  }
+
+  if (outputFormat && outputFormat.trim()) {
+    doc += ` *
+ * Output Format:
+ * ${outputFormat.trim().replace(/\n/g, '\n * ')}
+`;
+  }
+
+  if (constraints && constraints.trim()) {
+    doc += ` *
+ * Constraints:
+ * ${constraints.trim().replace(/\n/g, '\n * ')}
+`;
+  }
+
+  if (sampleInput && sampleInput.trim()) {
+    doc += ` *
+ * Sample Input:
+ * ${sampleInput.trim().replace(/\n/g, '\n * ')}
+`;
+  }
+
+  if (sampleOutput && sampleOutput.trim()) {
+    doc += ` *
+ * Sample Output:
+ * ${sampleOutput.trim().replace(/\n/g, '\n * ')}
+`;
+  }
+
+  if (explanation && explanation.trim()) {
+    doc += ` *
+ * Explanation:
+ * ${explanation.trim().replace(/\n/g, '\n * ')}
+`;
+  }
+
+  doc += ` */
 
 ${code}
 `;
+  return doc;
 }
 
 export function generateReadmeContent(params: {
@@ -393,6 +496,11 @@ export function generateReadmeContent(params: {
   difficulty: string;
   topicName: string;
   problemDescription: string;
+  inputFormat?: string;
+  outputFormat?: string;
+  constraints?: string;
+  sampleInput?: string;
+  sampleOutput?: string;
   explanation?: string;
   javaFileName?: string;
   commitUrl?: string;
@@ -406,6 +514,11 @@ export function generateReadmeContent(params: {
     difficulty,
     topicName,
     problemDescription,
+    inputFormat,
+    outputFormat,
+    constraints,
+    sampleInput,
+    sampleOutput,
     explanation,
     javaFileName = 'Solution.java',
     commitUrl,
@@ -420,7 +533,7 @@ export function generateReadmeContent(params: {
     ? '🟡 Medium'
     : '🔴 Hard';
 
-  return `# ${problemTitle}
+  let md = `# ${problemTitle}
 
 | Field | Details |
 |---|---|
@@ -435,8 +548,63 @@ export function generateReadmeContent(params: {
 
 ${problemDescription || 'No description provided.'}
 
-${explanation ? `## Explanation\n\n${explanation}\n` : ''}
-## Solution
+`;
+
+  if (inputFormat && inputFormat.trim()) {
+    md += `### Input Format
+
+${inputFormat.trim()}
+
+`;
+  }
+
+  if (outputFormat && outputFormat.trim()) {
+    md += `### Output Format
+
+${outputFormat.trim()}
+
+`;
+  }
+
+  if (constraints && constraints.trim()) {
+    md += `### Constraints
+
+\`\`\`
+${constraints.trim()}
+\`\`\`
+
+`;
+  }
+
+  if (sampleInput && sampleInput.trim()) {
+    md += `### Sample Input
+
+\`\`\`
+${sampleInput.trim()}
+\`\`\`
+
+`;
+  }
+
+  if (sampleOutput && sampleOutput.trim()) {
+    md += `### Sample Output
+
+\`\`\`
+${sampleOutput.trim()}
+\`\`\`
+
+`;
+  }
+
+  if (explanation && explanation.trim()) {
+    md += `## Explanation
+
+${explanation.trim()}
+
+`;
+  }
+
+  md += `## Solution
 
 - **Language:** Java
 - **Source Code:** [\`${javaFileName}\`](./${javaFileName})
@@ -445,5 +613,8 @@ ${explanation ? `## Explanation\n\n${explanation}\n` : ''}
 
 *Pushed from [Placement Practice Portal](https://practice-portal-mu.vercel.app)${commitUrl ? ` • [View Commit](${commitUrl})` : ''}*
 `;
+
+  return md;
 }
+
 
