@@ -21,9 +21,11 @@ A full-stack, production-grade engineering placement preparation and coding asse
   - 12-month GitHub-style activity contribution heatmap.
   - 6-problem daily practice generator with balanced quotas.
   - Milestone achievements with live progress percentages.
-- **Phase 5 — GitHub Sync Integration**:
-  - GitHub OAuth connection and automatic repo creation (`placement-practice`).
-  - Automatic push of accepted solutions with structured directories (e.g. `Java/Arrays/TwoSum.java`).
+- **Phase 5 — Interactive Problem Workspace & Code Editor**:
+  - Direct problem routing via `/problems/:id` with dedicated "Code Now" triggers.
+  - Monaco code editor loaded with verified Java starter templates and reset capabilities.
+  - Comprehensive problem details: description, constraints, I/O formats, sample cases, and step-by-step hints.
+  - Real-time submission execution with public & hidden test case evaluation.
 - **Phase 6 — Peer Collaboration & Learning Analytics**:
   - Friend request system (request, accept, reject, remove).
   - Factual side-by-side comparison without toxic competitive rankings.
@@ -37,13 +39,21 @@ A full-stack, production-grade engineering placement preparation and coding asse
   - User directory & role governance.
   - Immutable security audit trail (`audit_logs`).
 - **Phase 8 — Placement Mode, Polish & Production Readiness**:
-  - `/placement` multi-track assessment simulation (Java, DSA, Aptitude, Python).
+  - `/placement` multi-track assessment simulation (Java, DSA, Aptitude).
   - Optional stopwatch timer (never forces submission or countdown).
   - Global multi-field search (title, topic, subject, difficulty).
   - Advanced filters (subject, difficulty, level, status, language, bookmark) with pagination.
   - In-app notification center with anti-spam deduplication.
   - Custom 404, 403, and 500 error pages.
   - Multi-stage Docker containerization and complete documentation.
+
+---
+
+## 🌐 Live Production Deployments
+
+- **Frontend Client (Vercel)**: [https://practice-portal-mu.vercel.app](https://practice-portal-mu.vercel.app)
+- **Backend API (Render)**: [https://practice-portal-kmri.onrender.com](https://practice-portal-kmri.onrender.com)
+
 
 ---
 
