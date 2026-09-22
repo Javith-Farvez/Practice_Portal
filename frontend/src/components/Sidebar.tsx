@@ -287,28 +287,44 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
         {/* User Card at bottom of sidebar */}
         <div className="p-4 border-t border-[#E5DED4] dark:border-stone-800 bg-[#F8F5EE] dark:bg-stone-900/60">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-[#244D38] text-white flex items-center justify-center font-bold text-sm shrink-0">
-                {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-[#17211B] dark:text-white truncate">
-                  {user?.name || 'User'}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  <span
-                    className={`inline-block w-1.5 h-1.5 rounded-full ${
-                      user?.role === 'ADMIN' ? 'bg-amber-500' : 'bg-[#4E8A61]'
-                    }`}
-                  />
-                  <p className="text-xs text-[#5F665F] dark:text-stone-400 truncate">
-                    {user?.role || 'STUDENT'}
+          {user ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-[#244D38] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                  {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold text-[#17211B] dark:text-white truncate">
+                    {user.name}
                   </p>
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`inline-block w-1.5 h-1.5 rounded-full ${
+                        user.role === 'ADMIN' ? 'bg-amber-500' : 'bg-[#4E8A61]'
+                      }`}
+                    />
+                    <p className="text-xs text-[#5F665F] dark:text-stone-400 truncate">
+                      {user.role}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-[#FAF6EE] dark:bg-stone-800 border border-[#E8DFC8] dark:border-stone-700 flex items-center justify-center font-bold text-xs text-[#E76F51]">
+                  G
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-[#17211B] dark:text-white">Guest Learner</p>
+                  <NavLink to="/login" className="text-[11px] font-bold text-[#E76F51] hover:underline">
+                    Sign in to track progress →
+                  </NavLink>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
     </>

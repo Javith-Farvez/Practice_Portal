@@ -5,15 +5,57 @@ import { spawn, exec } from 'child_process';
 import { Language, ExecutionResult } from './types';
 import { checkCodeSecurity, sanitizeErrorOutput } from './security';
 
-// Resolve Java & Python executables with fallback paths
+// Resolve Java & Python executables with fallback paths across environments
 const findJavaBinaries = (): { javac: string; java: string } => {
-  const jdkBin = 'C:\\Program Files\\Java\\jdk1.8.0_231\\bin';
-  if (fs.existsSync(path.join(jdkBin, 'javac.exe')) && fs.existsSync(path.join(jdkBin, 'java.exe'))) {
-    return {
-      javac: path.join(jdkBin, 'javac.exe'),
-      java: path.join(jdkBin, 'java.exe'),
-    };
+  // 1. Check JAVA_HOME
+  if (process.env.JAVA_HOME) {
+    const binDir = path.join(process.env.JAVA_HOME, 'bin');
+    const javacPath = path.join(binDir, process.platform === 'win32' ? 'javac.exe' : 'javac');
+    const javaPath = path.join(binDir, process.platform === 'win32' ? 'java.exe' : 'java');
+    if (fs.existsSync(javacPath) && fs.existsSync(javaPath)) {
+      return { javac: javacPath, java: javaPath };
+    }
   }
+
+  // 2. Check Windows Program Files JDK directories
+  if (process.platform === 'win32') {
+    const javaRoots = ['C:\\Program Files\\Java', 'C:\\Program Files (x86)\\Java'];
+    for (const root of javaRoots) {
+      if (fs.existsSync(root)) {
+        try {
+          const entries = fs.readdirSync(root);
+          const jdkDirs = entries.filter((d) => d.startsWith('jdk') || d.includes('jdk'));
+          for (const jdk of jdkDirs) {
+            const javac = path.join(root, jdk, 'bin', 'javac.exe');
+            const java = path.join(root, jdk, 'bin', 'java.exe');
+            if (fs.existsSync(javac) && fs.existsSync(java)) {
+              return { javac, java };
+            }
+          }
+        } catch {
+          // continue
+        }
+      }
+    }
+  } else {
+    // 3. Check Linux standard JDK directories
+    const linuxJdks = [
+      '/usr/bin',
+      '/usr/local/bin',
+      '/usr/lib/jvm/default-jvm/bin',
+      '/usr/lib/jvm/java-17-openjdk/bin',
+      '/usr/lib/jvm/java-11-openjdk/bin',
+    ];
+    for (const binDir of linuxJdks) {
+      const javac = path.join(binDir, 'javac');
+      const java = path.join(binDir, 'java');
+      if (fs.existsSync(javac) && fs.existsSync(java)) {
+        return { javac, java };
+      }
+    }
+  }
+
+  // 4. Fallback to system PATH
   return { javac: 'javac', java: 'java' };
 };
 

@@ -20,8 +20,8 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install Python 3 and OpenJDK 17 for code evaluation sandbox
-RUN apk add --no-cache python3 openjdk17-jre-headless bash coreutils
+# Install Python 3 and OpenJDK 17 JDK (includes javac compiler) for code evaluation sandbox
+RUN apk add --no-cache python3 openjdk17 bash coreutils
 
 ENV NODE_ENV=production
 ENV PORT=5000

@@ -23,46 +23,98 @@ import { PlacementPage } from './pages/PlacementPage';
 import { SubmissionHistoryPage } from './pages/SubmissionHistoryPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { NotFoundPage, ForbiddenPage, ServerErrorPage } from './pages/ErrorPages';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const App: React.FC = () => {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+    <ErrorBoundary>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* Public Standalone Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
 
-            {/* Authenticated Dashboard Layout Routes */}
-            <Route
-              element={
-                <ProtectedRoute>
-                  <DashboardLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
+              {/* Dashboard Layout Routes */}
+              <Route element={<DashboardLayout />}>
+                {/* Public Learning Roadmaps & Problem Catalogs */}
+                <Route path="/java" element={<SubjectPage />} />
+                <Route path="/dsa" element={<SubjectPage />} />
+                <Route path="/aptitude" element={<SubjectPage />} />
+                <Route path="/subjects/:slug" element={<SubjectPage />} />
 
-              {/* Learning Roadmaps & Subject Views */}
-              <Route path="/java" element={<SubjectPage />} />
-              <Route path="/dsa" element={<SubjectPage />} />
-              <Route path="/aptitude" element={<SubjectPage />} />
-              <Route path="/subjects/:slug" element={<SubjectPage />} />
+                {/* Topic & Problem Views */}
+                <Route path="/topics/:id" element={<TopicDetailPage />} />
+                <Route path="/problems" element={<ProblemListPage />} />
+                <Route path="/problems/:id" element={<ProblemDetailPage />} />
 
-              {/* Topic & Problem Views */}
-              <Route path="/topics/:id" element={<TopicDetailPage />} />
-              <Route path="/problems" element={<ProblemListPage />} />
-              <Route path="/problems/:id" element={<ProblemDetailPage />} />
-
-              {/* Feature Modules */}
-              <Route path="/practice" element={<ComingSoonPage />} />
-              <Route path="/submissions" element={<SubmissionHistoryPage />} />
-              <Route path="/analytics" element={<AnalyticsPage />} />
-              <Route path="/friends" element={<FriendsPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
+                {/* Authenticated Student Features */}
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <SettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/practice"
+                  element={
+                    <ProtectedRoute>
+                      <ComingSoonPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/submissions"
+                  element={
+                    <ProtectedRoute>
+                      <SubmissionHistoryPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/analytics"
+                  element={
+                    <ProtectedRoute>
+                      <AnalyticsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/friends"
+                  element={
+                    <ProtectedRoute>
+                      <FriendsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/placement"
+                  element={
+                    <ProtectedRoute>
+                      <PlacementPage />
+                    </ProtectedRoute>
+                  }
+                />
 
               {/* Admin Protected Routes */}
               <Route
@@ -121,20 +173,19 @@ export const App: React.FC = () => {
                   </AdminRoute>
                 }
               />
-              {/* Phase 8: Placement Mode */}
-              <Route path="/placement" element={<PlacementPage />} />
-            </Route>
+              </Route>
 
-            {/* Error Pages */}
-            <Route path="/403" element={<ForbiddenPage />} />
-            <Route path="/500" element={<ServerErrorPage />} />
+              {/* Error Pages */}
+              <Route path="/403" element={<ForbiddenPage />} />
+              <Route path="/500" element={<ServerErrorPage />} />
 
-            {/* Catch-all 404 Page */}
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </ThemeProvider>
+              {/* Catch-all 404 Page */}
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 };
 

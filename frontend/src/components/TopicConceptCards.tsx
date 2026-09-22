@@ -39,10 +39,20 @@ import {
 
 interface TopicConceptCardsProps {
   orderIndex: number;
-  slug: string;
+  slug?: string;
+  subjectSlug?: string;
 }
 
-export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex, slug }) => {
+export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({
+  orderIndex = 1,
+  slug = '',
+  subjectSlug = 'java',
+}) => {
+  const safeSlug = (slug || '').toLowerCase();
+  const isJava = (subjectSlug || 'java').toLowerCase() === 'java';
+  const isDsa = (subjectSlug || '').toLowerCase() === 'dsa';
+  const isAptitude = (subjectSlug || '').toLowerCase() === 'aptitude';
+
   // Interactive states for Topic 1: Variables
   const [selectedVar, setSelectedVar] = useState<{
     type: string;
@@ -72,7 +82,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // Interactive states for Arrays (Topics 14 & 15, matching reference images 1 to 5)
   const [arrayTab, setArrayTab] = useState<
     '1d-traversal' | '1d-anatomy' | 'program-lifecycle' | '2d-grid' | '2d-coordinates'
-  >(orderIndex === 15 || slug.includes('2d') ? '2d-coordinates' : '1d-traversal');
+  >((isJava && orderIndex === 15) || safeSlug.includes('2d') ? '2d-coordinates' : '1d-traversal');
   const [traversalStep, setTraversalStep] = useState<number>(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState<boolean>(false);
   const [selectedCell1D, setSelectedCell1D] = useState<number>(4);
@@ -86,7 +96,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
 
   // Interactive state for Strings & StringBuilder (Topics 16 & 17, matching Images 1, 2, 3)
   const [stringTab, setStringTab] = useState<'string-methods' | 'stringbuilder-buffer' | 'string-vs-builder'>(
-    orderIndex === 17 || slug.includes('builder') ? 'stringbuilder-buffer' : 'string-methods'
+    (isJava && orderIndex === 17) || safeSlug.includes('builder') ? 'stringbuilder-buffer' : 'string-methods'
   );
   const [testString, setTestString] = useState<string>('  Hello Java World!  ');
   const [selectedStringMethod, setSelectedStringMethod] = useState<string>('length');
@@ -157,7 +167,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 1: VARIABLES (Exact Memory Allocation Diagram from Reference Image 1)
   // =========================================================================
-  if (orderIndex === 1 || slug.includes('variable')) {
+  if (orderIndex === 1 || safeSlug.includes('variable')) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#E8DFC8] dark:border-stone-800">
@@ -278,7 +288,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 2: DATA TYPES (Exact Primitive Types Table from Reference Image 2)
   // =========================================================================
-  if (orderIndex === 2 || slug.includes('data-type')) {
+  if (orderIndex === 2 || safeSlug.includes('data-type')) {
     const primitives = [
       { type: 'boolean', size: '1 bit', range: 'true or false', defaultVal: 'false', category: 'Logical' },
       { type: 'byte', size: '8 bits', range: '[-128, 127]', defaultVal: '0', category: 'Integer' },
@@ -368,7 +378,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 3: OPERATORS (Exact Classification & Truth Table from Reference Image 3)
   // =========================================================================
-  if (orderIndex === 3 || slug.includes('operator')) {
+  if (orderIndex === 3 || safeSlug.includes('operator')) {
     const calculateLive = () => {
       switch (opChoice) {
         case '+':
@@ -557,7 +567,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 4: USER INPUT (Exact Scanner Program from Reference Image 4)
   // =========================================================================
-  if (orderIndex === 4 || slug.includes('input')) {
+  if (orderIndex === 4 || safeSlug.includes('input')) {
     const runSimulatedScanner = () => {
       setSimOutput(
         `Enter name, age and salary:\nName: ${simName}\nAge: ${simAge}\nSalary: ${Number(simSalary).toFixed(1)}`
@@ -717,7 +727,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 5: TYPE CASTING (Exact Widening & Narrowing Diagram from Reference Image 5)
   // =========================================================================
-  if (orderIndex === 5 || slug.includes('cast')) {
+  if (orderIndex === 5 || safeSlug.includes('cast')) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#E8DFC8] dark:border-stone-800">
@@ -801,7 +811,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 14 & 15: ARRAYS (1D & 2D) (Exact Visuals from Reference Images 1 to 5)
   // =========================================================================
-  if (orderIndex === 14 || orderIndex === 15 || slug.includes('array')) {
+  if (orderIndex === 14 || orderIndex === 15 || safeSlug.includes('array')) {
     const arr1DValues = [126, 32, 230, 21, 200];
     const traversalValues = [1, 2, 3, 4];
     const matrix2DValues = [
@@ -1506,7 +1516,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 12 & 13: METHODS & METHOD OVERLOADING (Exact Diagram from Image 4)
   // =========================================================================
-  if (orderIndex === 12 || orderIndex === 13 || slug.includes('method')) {
+  if (orderIndex === 12 || orderIndex === 13 || safeSlug.includes('method')) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E8DFC8] dark:border-stone-800">
@@ -1663,7 +1673,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 16 & 17: STRINGS & STRINGBUILDER (Exact Diagrams from Images 1, 2, 3)
   // =========================================================================
-  if (orderIndex === 16 || orderIndex === 17 || slug.includes('string')) {
+  if (orderIndex === 16 || orderIndex === 17 || safeSlug.includes('string')) {
     // 10 Hexagonal String Methods from Image 1
     const stringMethodsList = [
       { name: 'length()', ret: 'int', desc: 'Returns the number of characters in the string.', color: 'from-amber-500 to-orange-500', hexBg: '#F59E0B' },
@@ -2095,7 +2105,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 6: IF-ELSE (Exact Flowchart from Image 1)
   // =========================================================================
-  if (orderIndex === 6 || slug.includes('conditional')) {
+  if (orderIndex === 6 || safeSlug.includes('conditional')) {
     const isPassing = ifScore >= 50;
     return (
       <div className="space-y-6">
@@ -2232,7 +2242,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 7: SWITCH (Exact Flowchart from Image 2)
   // =========================================================================
-  if (orderIndex === 7 || slug.includes('switch')) {
+  if (orderIndex === 7 || safeSlug.includes('switch')) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E8DFC8] dark:border-stone-800">
@@ -2376,7 +2386,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 8: LOOPS (Exact Flowchart Comparison from Image 3)
   // =========================================================================
-  if (orderIndex === 8 || slug.includes('loop')) {
+  if (orderIndex === 8 || safeSlug.includes('loop')) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E8DFC8] dark:border-stone-800">
@@ -2489,7 +2499,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 9: BREAK, CONTINUE, AND RETURN (Exact 3-Card Layout from Image 4)
   // =========================================================================
-  if (orderIndex === 9 || slug.includes('break')) {
+  if (orderIndex === 9 || safeSlug.includes('break')) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E8DFC8] dark:border-stone-800">
@@ -2645,7 +2655,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 18: OOP - CLASS & OBJECTS, CONSTRUCTORS & THIS KEYWORD (Reference Images 1, 2, 3, 4, 5)
   // =========================================================================
-  if (orderIndex === 18 || slug.includes('oop')) {
+  if (orderIndex === 18 || safeSlug.includes('oop')) {
     const thisUsagesList = [
       {
         id: 1,
@@ -3206,7 +3216,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 19: ENCAPSULATION & PACKAGES (Reference Images 3 & 5)
   // =========================================================================
-  if (orderIndex === 19 || slug.includes('encapsulation')) {
+  if (orderIndex === 19 || safeSlug.includes('encapsulation')) {
     const handleDeposit = () => {
       if (depositAmtInput <= 0) {
         setLastBankMsg('⚠️ Validation Error: Deposit amount must be positive!');
@@ -3541,7 +3551,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 20: INHERITANCE (Exact Parent Class -> Child Class from Reference Image 5)
   // =========================================================================
-  if (orderIndex === 20 || slug.includes('inheritance')) {
+  if (orderIndex === 20 || safeSlug.includes('inheritance')) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E8DFC8] dark:border-stone-800">
@@ -3736,7 +3746,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 21: POLYMORPHISM (Reference Image 1)
   // =========================================================================
-  if (orderIndex === 21 || slug.includes('polymorphism')) {
+  if (orderIndex === 21 || safeSlug.includes('polymorphism')) {
     const animals = [
       { name: 'Dog', icon: '🐶', sound: 'Bark! Woof!', code: 'System.out.println("Woof! Bark!");', color: 'border-amber-400 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300' },
       { name: 'Cat', icon: '🐱', sound: 'Meow~', code: 'System.out.println("Meow~");', color: 'border-orange-300 bg-orange-50 dark:bg-orange-950/30 text-orange-800 dark:text-orange-300' },
@@ -3909,7 +3919,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 22: ABSTRACTION & INTERFACES (Reference Images 2 & 4)
   // =========================================================================
-  if (orderIndex === 22 || slug.includes('abstraction') || slug.includes('interface')) {
+  if (orderIndex === 22 || safeSlug.includes('abstraction') || safeSlug.includes('interface')) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E8DFC8] dark:border-stone-800">
@@ -4181,7 +4191,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 23: EXCEPTION HANDLING (Reference Image 1: Try-Catch-Finally Flowchart)
   // =========================================================================
-  if (orderIndex === 23 || slug.includes('exception')) {
+  if (orderIndex === 23 || safeSlug.includes('exception')) {
     const isException = exceptionScenario === 'error';
 
     return (
@@ -4339,7 +4349,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 24: COLLECTIONS FRAMEWORK (Reference Images 3, 4, 5)
   // =========================================================================
-  if (orderIndex === 24 || slug.includes('collection')) {
+  if (orderIndex === 24 || safeSlug.includes('collection')) {
     const tableData = [
       {
         type: 'List',
@@ -4704,7 +4714,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 26: FILE HANDLING (Reference Image 2: File Stream Architecture)
   // =========================================================================
-  if (orderIndex === 26 || slug.includes('file')) {
+  if (orderIndex === 26 || safeSlug.includes('file')) {
     const handleRunFileStream = () => {
       setIsFileStreaming(true);
       setTimeout(() => {
@@ -4872,7 +4882,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 27: JAVA GENERICS CLASS (Box<T>) - Matching Reference Image 1
   // =========================================================================
-  if (orderIndex === 27 || slug.includes('generic')) {
+  if (orderIndex === 27 || safeSlug.includes('generic')) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-2 pb-2 border-b border-[#E8DFC8] dark:border-stone-800">
@@ -5112,7 +5122,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 28: SYNTAX AND RULES OF WRITING LAMBDAS IN JAVA - Matching Reference Image 2
   // =========================================================================
-  if (orderIndex === 28 || slug.includes('lambda')) {
+  if (orderIndex === 28 || safeSlug.includes('lambda')) {
     // Exact 6 rules from Image 2
     const LAMBDA_RULES = [
       {
@@ -5316,7 +5326,7 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
   // =========================================================================
   // TOPIC 29: JAVA MULTITHREADING & THREAD LIFECYCLE - Matching Reference Image 3
   // =========================================================================
-  if (orderIndex === 29 || slug.includes('thread') || slug.includes('multithreading')) {
+  if (orderIndex === 29 || safeSlug.includes('thread') || safeSlug.includes('multithreading')) {
     const THREAD_STATES = [
       {
         name: 'NEW',
@@ -6040,8 +6050,40 @@ export const TopicConceptCards: React.FC<TopicConceptCardsProps> = ({ orderIndex
     },
   };
 
-  const details = TOPIC_DETAILS[orderIndex];
-  if (!details) return null;
+  const details = TOPIC_DETAILS[orderIndex] || {
+    title: slug ? slug.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') : (`Topic ${orderIndex}`),
+    stage: isDsa ? 'DSA Algorithm & Logic' : isAptitude ? 'Aptitude Screening' : 'Core Concept',
+    concept: isDsa
+      ? 'Master this algorithmic pattern through systematic problem decomposition, time and space complexity evaluation, and hands-on coding practice.'
+      : isAptitude
+      ? 'Develop quick calculation shortcuts, logical deductive methods, and formula patterns essential for campus recruitment screening tests.'
+      : 'Comprehensive programming principles, structured interview patterns, and clean code techniques.',
+    subtopics: isDsa
+      ? ['Algorithmic intuition', 'Time complexity analysis', 'Space optimization', 'Edge case handling']
+      : isAptitude
+      ? ['Core formulas & shortcuts', 'Step-by-step calculation', 'Speed tricks', 'Common trap questions']
+      : ['Fundamental syntax', 'Best practices', 'Memory efficiency', 'Interview questions'],
+    code: isDsa
+      ? [
+          '// Optimal algorithmic pattern reference',
+          'public int solve(int[] input) {',
+          '    if (input == null || input.length == 0) return 0;',
+          '    int result = 0;',
+          '    // Core logic implementation',
+          '    return result;',
+          '}',
+        ]
+      : [
+          '// Standard reference pattern',
+          'public class Solution {',
+          '    public static void main(String[] args) {',
+          '        System.out.println("Ready to practice!");',
+          '    }',
+          '}',
+        ],
+    placementTip: 'Focus on understanding the core pattern first. Once comfortable with the basic concept, practice identifying edge cases quickly during interviews.',
+    mistake: 'Jumping directly into writing code before dry-running on sample test cases and analyzing time complexity.',
+  };
 
   return (
     <div className="space-y-6">

@@ -39,6 +39,7 @@ export const DashboardLayout: React.FC = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchNotifications = async () => {
+    if (!user) return;
     try {
       const res = await api.get('/notifications?limit=10');
       if (res.data.success) {
@@ -223,20 +224,37 @@ export const DashboardLayout: React.FC = () => {
               )}
             </div>
 
-            {/* User Profile Pill */}
-            <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
-              <Link to="/profile" title="View Student Profile" className="text-right hidden sm:block hover:opacity-80 transition-opacity cursor-pointer">
-                <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">{user?.name}</div>
-                <div className="text-[11px] text-slate-500 dark:text-slate-400">{user?.email}</div>
-              </Link>
-              <button
-                onClick={handleLogout}
-                title="Logout"
-                className="p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
+            {/* User Profile Pill or Guest Buttons */}
+            {user ? (
+              <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
+                <Link to="/profile" title="View Student Profile" className="text-right hidden sm:block hover:opacity-80 transition-opacity cursor-pointer">
+                  <div className="text-xs font-semibold text-slate-900 dark:text-slate-100">{user.name}</div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400">{user.email}</div>
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  title="Logout"
+                  className="p-2 rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors focus-visible:ring-2 focus-visible:ring-rose-500 cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800">
+                <Link
+                  to="/login"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-[#1F2421] dark:text-stone-200 bg-[#FAF6EE] dark:bg-stone-800 hover:bg-[#F0EAE0] transition-colors"
+                >
+                  Log In
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-[#E76F51] hover:bg-[#d85e40] shadow-xs transition-colors"
+                >
+                  Register
+                </Link>
+              </div>
+            )}
           </div>
         </header>
 

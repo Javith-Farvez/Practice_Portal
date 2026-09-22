@@ -237,7 +237,11 @@ export const TopicDetailPage: React.FC = () => {
       </div>
 
       {/* Structured Concept Cards Component */}
-      <TopicConceptCards orderIndex={topic.order_index} slug={topic.slug} />
+      <TopicConceptCards
+        orderIndex={topic.order_index}
+        slug={topic.slug || ''}
+        subjectSlug={topic.subject_slug || 'java'}
+      />
 
       {/* Practice Section Header */}
       <div className="pt-4">
@@ -332,22 +336,16 @@ export const TopicDetailPage: React.FC = () => {
             className="text-xs font-bold text-[#6B706B] hover:text-[#E76F51] flex items-center gap-1 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>All Java Topics</span>
+            <span>All {topic.subject_name || (topic.subject_slug === 'dsa' ? 'DSA' : 'Java')} Topics</span>
           </Link>
 
-          {nextTopic.order_index <= 4 ? (
-            <Link
-              to={`/topics/${nextTopic.id}`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#1F2421] hover:bg-stone-800 dark:bg-amber-100 dark:text-[#1F2421] transition-all shadow-sm"
-            >
-              <span>Next Topic: {nextTopic.name}</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          ) : (
-            <span className="text-xs text-stone-400 font-medium">
-              Next Topic: {nextTopic.name} (Coming Next)
-            </span>
-          )}
+          <Link
+            to={`/topics/${nextTopic.id}`}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#1F2421] hover:bg-stone-800 dark:bg-amber-100 dark:text-[#1F2421] transition-all shadow-sm"
+          >
+            <span>Next Topic: {nextTopic.name}</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
       )}
     </div>
