@@ -50,6 +50,10 @@ interface ProblemDetail {
   constraints?: string;
   sample_input?: string;
   sample_output?: string;
+  sampleInput?: string;
+  sampleOutput?: string;
+  inputFormat?: string;
+  outputFormat?: string;
   explanation?: string;
   hints: string[];
   supported_languages: string[];
@@ -557,50 +561,61 @@ export const ProblemDetailPage: React.FC = () => {
           )}
 
           {/* 5. SAMPLE INPUT (Directly below Constraints) */}
-          <div className="p-4 rounded-2xl bg-[#F8F5EE] dark:bg-stone-900/60 border border-[#E5DED4] dark:border-stone-800 space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#244D38] dark:text-emerald-400 flex items-center gap-1.5">
-                <Code2 className="w-3.5 h-3.5" />
-                <span>Sample Input</span>
-              </h3>
-              {problem.sample_input && problem.sample_input !== 'No input' && (
-                <button
-                  type="button"
-                  onClick={() => handleCopyText(problem.sample_input || '', 'input')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#FFFDF9] dark:bg-stone-800 border border-[#E5DED4] dark:border-stone-700 text-[#17211B] dark:text-stone-200 hover:bg-[#E5DED4] transition-colors cursor-pointer"
-                >
-                  {copiedInput ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 text-stone-400" />}
-                  <span>{copiedInput ? 'Copied' : 'Copy'}</span>
-                </button>
-              )}
-            </div>
-            <pre className="p-3 rounded-xl bg-[#FFFDF9] border border-[#E5DED4] text-xs font-mono text-[#17211B] overflow-x-auto whitespace-pre-wrap leading-relaxed">
-              {problem.sample_input || 'No input required'}
-            </pre>
-          </div>
+          {(() => {
+            const sampleIn = problem.sample_input ?? problem.sampleInput ?? 'No input required';
+            const isNoInput = !sampleIn || sampleIn.trim() === '' || sampleIn.toLowerCase().includes('no input');
+            return (
+              <div className="p-4 rounded-2xl bg-[#F8F5EE] dark:bg-stone-900/60 border border-[#E5DED4] dark:border-stone-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#244D38] dark:text-emerald-400 flex items-center gap-1.5">
+                    <Code2 className="w-3.5 h-3.5" />
+                    <span>Sample Input</span>
+                  </h3>
+                  {!isNoInput && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(sampleIn, 'input')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#FFFDF9] dark:bg-stone-800 border border-[#E5DED4] dark:border-stone-700 text-[#17211B] dark:text-stone-200 hover:bg-[#E5DED4] transition-colors cursor-pointer"
+                    >
+                      {copiedInput ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 text-stone-400" />}
+                      <span>{copiedInput ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  )}
+                </div>
+                <pre className="p-3 rounded-xl bg-[#FFFDF9] dark:bg-stone-800 border border-[#E5DED4] dark:border-stone-700 text-xs font-mono text-[#17211B] dark:text-stone-100 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                  {sampleIn}
+                </pre>
+              </div>
+            );
+          })()}
 
           {/* 6. SAMPLE OUTPUT (Directly below Sample Input) */}
-          <div className="p-4 rounded-2xl bg-[#F8F5EE] border border-[#E5DED4] space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#A8752D] flex items-center gap-1.5">
-                <Terminal className="w-3.5 h-3.5" />
-                <span>Sample Output</span>
-              </h3>
-              {problem.sample_output && (
-                <button
-                  type="button"
-                  onClick={() => handleCopyText(problem.sample_output || '', 'output')}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#FFFDF9] border border-[#E5DED4] text-[#17211B] hover:bg-[#E5DED4] transition-colors cursor-pointer"
-                >
-                  {copiedOutput ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 text-stone-400" />}
-                  <span>{copiedOutput ? 'Copied' : 'Copy'}</span>
-                </button>
-              )}
-            </div>
-            <pre className="p-3 rounded-xl bg-[#FFFDF9] border border-[#E5DED4] text-xs font-mono text-[#244D38] font-semibold overflow-x-auto whitespace-pre-wrap leading-relaxed">
-              {problem.sample_output || ''}
-            </pre>
-          </div>
+          {(() => {
+            const sampleOut = problem.sample_output ?? problem.sampleOutput ?? '';
+            return (
+              <div className="p-4 rounded-2xl bg-[#F8F5EE] dark:bg-stone-900/60 border border-[#E5DED4] dark:border-stone-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#A8752D] dark:text-amber-400 flex items-center gap-1.5">
+                    <Terminal className="w-3.5 h-3.5" />
+                    <span>Sample Output</span>
+                  </h3>
+                  {sampleOut && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(sampleOut, 'output')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-[#FFFDF9] dark:bg-stone-800 border border-[#E5DED4] dark:border-stone-700 text-[#17211B] dark:text-stone-200 hover:bg-[#E5DED4] transition-colors cursor-pointer"
+                    >
+                      {copiedOutput ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 text-stone-400" />}
+                      <span>{copiedOutput ? 'Copied' : 'Copy'}</span>
+                    </button>
+                  )}
+                </div>
+                <pre className="p-3 rounded-xl bg-[#FFFDF9] dark:bg-stone-800 border border-[#E5DED4] dark:border-stone-700 text-xs font-mono text-[#244D38] dark:text-emerald-400 font-semibold overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                  {sampleOut}
+                </pre>
+              </div>
+            );
+          })()}
 
           {/* 7. EXPLANATION (Directly below Sample Output) */}
           {problem.explanation && (

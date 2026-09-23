@@ -1,6 +1,7 @@
 import { SUBJECTS, TOPICS, SubjectDefinition, TopicDefinition } from './roadmapData';
 import { ALL_JAVA_PROBLEMS, ProblemSeed } from './problems';
 import { SEED_PROBLEMS } from './problemData';
+import { NON_JAVA_PROBLEM_SAMPLES } from './nonJavaProblemsData';
 
 export interface EnrichedProblem extends ProblemSeed {
   id: number;
@@ -247,14 +248,17 @@ class FallbackStore {
         input_format: p.input_format || '',
         output_format: p.output_format || '',
         constraints: p.constraints || '',
-        sample_input: p.input_format || '',
-        sample_output: p.output_format || '',
+        sample_input: NON_JAVA_PROBLEM_SAMPLES[id]?.sample_input || p.input_format || 'No input required',
+        sample_output: NON_JAVA_PROBLEM_SAMPLES[id]?.sample_output || p.output_format || '',
         explanation: p.explanation || '',
         hints: p.hints || [],
         starter_code: p.subjectSlug === 'python' ? '# Write your solution here\n' : '// Write your solution here\n',
         reference_solution: '',
         validation_type: 'TRIMMED',
-        public_tests: [{ input: p.input_format || '', expected_output: p.output_format || '' }],
+        public_tests: [{
+          input: NON_JAVA_PROBLEM_SAMPLES[id]?.sample_input || '',
+          expected_output: NON_JAVA_PROBLEM_SAMPLES[id]?.sample_output || ''
+        }],
         hidden_tests: [],
         status: 'PUBLISHED',
         is_deleted: false,

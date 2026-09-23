@@ -507,12 +507,27 @@ export const getProblemById = async (req: Request, res: Response, next: NextFunc
           supportedLanguages = [];
         }
 
+        const sampleInput =
+          problem.sample_input !== null && problem.sample_input !== undefined && String(problem.sample_input).trim() !== ''
+            ? problem.sample_input
+            : 'No input required';
+        const sampleOutput =
+          problem.sample_output !== null && problem.sample_output !== undefined ? problem.sample_output : '';
+
         res.status(200).json({
           success: true,
           message: 'Problem retrieved successfully.',
           data: {
             problem: {
               ...problem,
+              sample_input: sampleInput,
+              sample_output: sampleOutput,
+              sampleInput: sampleInput,
+              sampleOutput: sampleOutput,
+              input_format: problem.input_format || '',
+              inputFormat: problem.input_format || '',
+              output_format: problem.output_format || '',
+              outputFormat: problem.output_format || '',
               hints,
               supported_languages: supportedLanguages,
               is_bookmarked: Boolean(problem.is_bookmarked),
@@ -536,11 +551,28 @@ export const getProblemById = async (req: Request, res: Response, next: NextFunc
       return;
     }
 
+    const fbSampleInput =
+      fallbackProblem.sample_input !== null && fallbackProblem.sample_input !== undefined && String(fallbackProblem.sample_input).trim() !== ''
+        ? fallbackProblem.sample_input
+        : 'No input required';
+    const fbSampleOutput =
+      fallbackProblem.sample_output !== null && fallbackProblem.sample_output !== undefined ? fallbackProblem.sample_output : '';
+
     res.status(200).json({
       success: true,
       message: 'Problem retrieved successfully.',
       data: {
-        problem: fallbackProblem,
+        problem: {
+          ...fallbackProblem,
+          sample_input: fbSampleInput,
+          sample_output: fbSampleOutput,
+          sampleInput: fbSampleInput,
+          sampleOutput: fbSampleOutput,
+          input_format: fallbackProblem.input_format || '',
+          inputFormat: fallbackProblem.input_format || '',
+          output_format: fallbackProblem.output_format || '',
+          outputFormat: fallbackProblem.output_format || '',
+        },
       },
     });
   } catch (error) {

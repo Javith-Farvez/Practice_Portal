@@ -93,9 +93,9 @@ export const seedPhase2Data = async () => {
       await pool.query(
         `INSERT INTO problems (
           title, description, subject_id, topic_id, difficulty, level,
-          input_format, output_format, constraints, explanation,
+          input_format, output_format, constraints, sample_input, sample_output, explanation,
           hints, supported_languages
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
         [
           prob.title,
           prob.description,
@@ -106,6 +106,8 @@ export const seedPhase2Data = async () => {
           prob.input_format,
           prob.output_format,
           prob.constraints,
+          (prob as any).sample_input || prob.input_format || 'No input required',
+          (prob as any).sample_output || prob.output_format || '',
           prob.explanation,
           JSON.stringify(prob.hints),
           JSON.stringify(prob.supported_languages),

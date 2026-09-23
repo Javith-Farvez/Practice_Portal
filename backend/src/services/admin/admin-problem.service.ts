@@ -266,6 +266,16 @@ export class AdminProblemService {
     const isPublished = status === 'PUBLISHED';
     const slug = data.slug?.trim() || data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
+    // Mandatory sample input and output validation for published problems
+    if (isPublished) {
+      if (!data.sample_output || String(data.sample_output).trim() === '') {
+        throw new Error('Validation failed: Sample Output is required before publishing a problem.');
+      }
+      if (!data.sample_input || String(data.sample_input).trim() === '') {
+        throw new Error('Validation failed: Sample Input is required before publishing a problem (use "No input required" if problem genuinely requires no input).');
+      }
+    }
+
     const insertRes = await pool.query<{ id: number }>(
       `INSERT INTO problems (
         title, slug, description, subject_id, topic_id, subtopic_id,
@@ -400,6 +410,16 @@ export class AdminProblemService {
       status = isPublished ? 'PUBLISHED' : 'UNPUBLISHED';
     }
 
+    // Mandatory sample input and output validation for published problems
+    if (isPublished) {
+      if (!sampleOutput || String(sampleOutput).trim() === '') {
+        throw new Error('Validation failed: Sample Output is required before publishing a problem.');
+      }
+      if (!sampleInput || String(sampleInput).trim() === '') {
+        throw new Error('Validation failed: Sample Input is required before publishing a problem (use "No input required" if problem genuinely requires no input).');
+      }
+    }
+
     const hintsJson =
       data.hints !== undefined
         ? JSON.stringify(data.hints)
@@ -518,6 +538,17 @@ export class AdminProblemService {
 
     const title = result.rows[0].title;
     const isPublished = status === 'PUBLISHED';
+
+    if (isPublished) {
+      const pCheck = await pool.query('SELECT sample_input, sample_output FROM problems WHERE id = $1', [id]);
+      const pRow = pCheck.rows[0];
+      if (!pRow?.sample_output || String(pRow.sample_output).trim() === '') {
+        throw new Error('Cannot publish problem: Sample Output is required.');
+      }
+      if (!pRow?.sample_input || String(pRow.sample_input).trim() === '') {
+        throw new Error('Cannot publish problem: Sample Input is required.');
+      }
+    }
     const isDeleted = status === 'ARCHIVED';
 
     await pool.query(

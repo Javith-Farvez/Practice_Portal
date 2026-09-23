@@ -87,7 +87,7 @@ export async function fastBulkSeed(closePool: boolean = false) {
       let topicId = topicMap.get(`${subjectId}:${p.topic_slug}`) || topicMap.get(p.topic_slug) || 1;
 
       valuePlaceholders.push(
-        `($${pIdx}, $${pIdx + 1}, $${pIdx + 2}, $${pIdx + 3}, $${pIdx + 4}, $${pIdx + 5}, $${pIdx + 6}, $${pIdx + 7}, $${pIdx + 8}, $${pIdx + 9}, $${pIdx + 10}, $${pIdx + 11}, $${pIdx + 12}, $${pIdx + 13}, $${pIdx + 14}::jsonb, $${pIdx + 15}::jsonb, $${pIdx + 16}::jsonb, true, false)`
+        `($${pIdx}, $${pIdx + 1}, $${pIdx + 2}, $${pIdx + 3}, $${pIdx + 4}, $${pIdx + 5}, $${pIdx + 6}, $${pIdx + 7}, $${pIdx + 8}, $${pIdx + 9}, $${pIdx + 10}, $${pIdx + 11}, $${pIdx + 12}, $${pIdx + 13}, $${pIdx + 14}, $${pIdx + 15}, $${pIdx + 16}::jsonb, $${pIdx + 17}::jsonb, $${pIdx + 18}::jsonb, true, false)`
       );
 
       params.push(
@@ -103,20 +103,22 @@ export async function fastBulkSeed(closePool: boolean = false) {
         p.input_format || '',
         p.output_format || '',
         p.constraints || '',
+        p.sample_input || 'No input required',
+        p.sample_output || '',
         p.explanation || '',
         p.starter_code || p.starter_snippets?.java || '',
         JSON.stringify(p.examples || []),
         JSON.stringify(p.hints || []),
         JSON.stringify(p.supported_languages || ['JAVA', 'PYTHON'])
       );
-      pIdx += 17;
+      pIdx += 19;
     }
 
     await pool.query(
       `
       INSERT INTO problems (
         id, title, slug, description, subject_id, topic_id, difficulty, level, status,
-        input_format, output_format, constraints, explanation, starter_code,
+        input_format, output_format, constraints, sample_input, sample_output, explanation, starter_code,
         examples, hints, supported_languages, is_published, is_deleted
       ) VALUES ${valuePlaceholders.join(',')}
       ON CONFLICT (id) DO UPDATE SET
@@ -131,6 +133,8 @@ export async function fastBulkSeed(closePool: boolean = false) {
         input_format = EXCLUDED.input_format,
         output_format = EXCLUDED.output_format,
         constraints = EXCLUDED.constraints,
+        sample_input = EXCLUDED.sample_input,
+        sample_output = EXCLUDED.sample_output,
         explanation = EXCLUDED.explanation,
         starter_code = EXCLUDED.starter_code,
         examples = EXCLUDED.examples,
